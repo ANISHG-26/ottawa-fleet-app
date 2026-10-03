@@ -20,6 +20,8 @@ For an explicitly disposable lab database, set `database.disposable.enabled=true
 
 ## Install and upgrade
 
+Chart 0.1.1 initializes the disposable database in `/var/lib/postgresql/data/pgdata`, below the disk mount root, so a freshly formatted disk's `lost+found` directory does not prevent startup. Before upgrading a disposable database created with an older chart, check for `PG_VERSION` at the mount root. An existing root-layout database requires an explicit data migration or an authorized disposable reset; switching the path alone would create a separate empty database.
+
 After replacing the six image digests and matching source metadata in a values file:
 
 ```sh
