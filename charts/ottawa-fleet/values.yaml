@@ -1,0 +1,126 @@
+global:
+  imagePullSecrets: []
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
+    seccompProfile:
+      type: RuntimeDefault
+
+serviceAccount:
+  create: true
+
+# Public API port values follow the v1 contract and are fixed by schema.
+ports:
+  fleetApi: 8080
+  rideApi: 8081
+  worker: 8082
+  web: 8080
+
+probes:
+  readiness:
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  liveness:
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# Supply release values with published image digests and source commits before
+# linting or installing. `ci-values.yaml` contains clearly synthetic test pins.
+images:
+  dbInit:
+    repository: ghcr.io/anishg-26/ottawa-fleet-app/db-init
+    digest: ""
+    sourceCommit: ""
+    architecture: amd64
+  fleetApi:
+    repository: ghcr.io/anishg-26/ottawa-fleet-app/fleet-api
+    digest: ""
+    sourceCommit: ""
+    architecture: amd64
+  rideApi:
+    repository: ghcr.io/anishg-26/ottawa-fleet-app/ride-api
+    digest: ""
+    sourceCommit: ""
+    architecture: amd64
+  worker:
+    repository: ghcr.io/anishg-26/ottawa-fleet-app/assignment-worker
+    digest: ""
+    sourceCommit: ""
+    architecture: amd64
+  scenarioRunner:
+    repository: ghcr.io/anishg-26/ottawa-fleet-app/scenario-runner
+    digest: ""
+    sourceCommit: ""
+    architecture: amd64
+  web:
+    repository: ghcr.io/anishg-26/ottawa-fleet-app/web
+    digest: ""
+    sourceCommit: ""
+    architecture: amd64
+
+database:
+  existingSecret: ottawa-fleet-database
+  secretKey: DATABASE_URL
+  disposable:
+    enabled: false
+    databaseName: fleet
+    imageRepository: postgres
+    imageDigest: ""
+    credentialsSecret: ottawa-fleet-lab-postgres
+    connectionSecret: ottawa-fleet-lab-database
+    connectionSecretKey: DATABASE_URL
+    usernameKey: POSTGRES_USER
+    passwordKey: POSTGRES_PASSWORD
+    storageClassName: ""
+    storage: 5Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+migrations:
+  enabled: true
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {cpu: 250m, memory: 128Mi}
+
+fleetApi:
+  replicas: 1
+  resources:
+    requests: {cpu: 100m, memory: 96Mi}
+    limits: {cpu: 500m, memory: 256Mi}
+  syntheticObservations: true
+  observationIntervalSeconds: 10
+  faultControlEnabled: false
+  faultLatencyMS: 0
+  faultErrorPercent: 0
+
+rideApi:
+  replicas: 1
+  resources:
+    requests: {cpu: 100m, memory: 96Mi}
+    limits: {cpu: 500m, memory: 256Mi}
+
+worker:
+  replicas: 1
+  autoscaling:
+    enabled: false
+  pauseAfterReservation: false
+  resources:
+    requests: {cpu: 100m, memory: 96Mi}
+    limits: {cpu: 500m, memory: 256Mi}
+
+web:
+  replicas: 1
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {cpu: 250m, memory: 128Mi}
+
+podAnnotations: {}

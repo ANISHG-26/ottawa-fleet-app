@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Ottawa Fleet chart values",
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$", "not": {"const": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}},
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "digest", "sourceCommit", "architecture"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1, "pattern": "^[a-zA-Z0-9./_-]+$"},
+        "digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$", "not": {"const": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}},
+        "sourceCommit": {"type": "string", "pattern": "^[a-f0-9]{40}$", "not": {"const": "0000000000000000000000000000000000000000"}},
+        "architecture": {"type": "string", "enum": ["amd64", "arm64"]}
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requests", "limits"],
+      "properties": {
+        "requests": {"$ref": "#/definitions/resourceSet"},
+        "limits": {"$ref": "#/definitions/resourceSet"}
+      }
+    },
+    "resourceSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cpu", "memory"],
+      "properties": {
+        "cpu": {"type": "string", "pattern": "^[0-9]+(m|\\.[0-9]+)?$"},
+        "memory": {"type": "string", "pattern": "^[0-9]+(Ki|Mi|Gi|Ti)?$"}
+      }
+    },
+    "probe": {"type":"object","additionalProperties":false,"required":["periodSeconds","timeoutSeconds","failureThreshold"],"properties":{"periodSeconds":{"type":"integer","minimum":1,"maximum":60},"timeoutSeconds":{"type":"integer","minimum":1,"maximum":10},"failureThreshold":{"type":"integer","minimum":1,"maximum":10}}}
+  },
+  "required": ["global", "serviceAccount", "ports", "probes", "images", "database", "migrations", "fleetApi", "rideApi", "worker", "web", "podAnnotations"],
+  "properties": {
+    "global": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["imagePullSecrets", "securityContext"],
+      "properties": {
+        "imagePullSecrets": {"type": "array", "items": {"type": "object", "required": ["name"], "additionalProperties": false, "properties": {"name": {"type": "string", "minLength": 1}}}},
+        "securityContext": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["runAsNonRoot", "runAsUser", "runAsGroup", "fsGroup", "seccompProfile"],
+          "properties": {
+            "runAsNonRoot": {"const": true},
+            "runAsUser": {"type": "integer", "minimum": 1},
+            "runAsGroup": {"type": "integer", "minimum": 1},
+            "fsGroup": {"type": "integer", "minimum": 1},
+            "seccompProfile": {"type": "object", "required": ["type"], "additionalProperties": false, "properties": {"type": {"const": "RuntimeDefault"}}}
+          }
+        }
+      }
+    },
+    "serviceAccount": {"type": "object", "additionalProperties": false, "required": ["create"], "properties": {"create": {"const": true}}},
+    "ports": {"type":"object","additionalProperties":false,"required":["fleetApi","rideApi","worker","web"],"properties":{"fleetApi":{"const":8080},"rideApi":{"const":8081},"worker":{"const":8082},"web":{"const":8080}}},
+    "probes": {"type":"object","additionalProperties":false,"required":["readiness","liveness"],"properties":{"readiness":{"$ref":"#/definitions/probe"},"liveness":{"$ref":"#/definitions/probe"}}},
+    "images": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dbInit", "fleetApi", "rideApi", "worker", "scenarioRunner", "web"],
+      "properties": {
+        "dbInit": {"$ref": "#/definitions/image"},
+        "fleetApi": {"$ref": "#/definitions/image"},
+        "rideApi": {"$ref": "#/definitions/image"},
+        "worker": {"$ref": "#/definitions/image"},
+        "scenarioRunner": {"$ref": "#/definitions/image"},
+        "web": {"$ref": "#/definitions/image"}
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["existingSecret", "secretKey", "disposable"],
+      "properties": {
+        "existingSecret": {"type": "string"},
+        "secretKey": {"type": "string", "minLength": 1},
+        "disposable": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "databaseName", "imageRepository", "imageDigest", "credentialsSecret", "connectionSecret", "connectionSecretKey", "usernameKey", "passwordKey", "storageClassName", "storage", "resources"],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "databaseName": {"type": "string", "pattern": "^[a-zA-Z0-9_-]+$"},
+            "imageRepository": {"type": "string", "minLength": 1},
+            "imageDigest": {"anyOf": [{"const": ""}, {"$ref": "#/definitions/digest"}]},
+            "credentialsSecret": {"type": "string", "minLength": 1},
+            "connectionSecret": {"type": "string", "minLength": 1},
+            "connectionSecretKey": {"type": "string", "minLength": 1},
+            "usernameKey": {"type": "string", "minLength": 1},
+            "passwordKey": {"type": "string", "minLength": 1},
+            "storageClassName": {"type": "string"},
+            "storage": {"type": "string", "minLength": 1},
+            "resources": {"$ref": "#/definitions/resources"}
+          }
+        }
+      }
+    },
+    "migrations": {"type": "object", "additionalProperties": false, "required": ["enabled", "resources"], "properties": {"enabled": {"const": true}, "resources": {"$ref": "#/definitions/resources"}}},
+    "fleetApi": {
+      "type": "object", "additionalProperties": false,
+      "required": ["replicas", "resources", "syntheticObservations", "observationIntervalSeconds", "faultControlEnabled", "faultLatencyMS", "faultErrorPercent"],
+      "properties": {
+        "replicas": {"type": "integer", "minimum": 1, "maximum": 20}, "resources": {"$ref": "#/definitions/resources"},
+        "syntheticObservations": {"type": "boolean"}, "observationIntervalSeconds": {"type": "integer", "minimum": 1, "maximum": 60},
+        "faultControlEnabled": {"const": false}, "faultLatencyMS": {"type": "integer", "minimum": 0, "maximum": 1000}, "faultErrorPercent": {"type": "integer", "minimum": 0, "maximum": 50}
+      }
+    },
+    "rideApi": {"type": "object", "additionalProperties": false, "required": ["replicas", "resources"], "properties": {"replicas": {"type": "integer", "minimum": 1, "maximum": 20}, "resources": {"$ref": "#/definitions/resources"}}},
+    "worker": {
+      "type": "object", "additionalProperties": false, "required": ["replicas", "autoscaling", "pauseAfterReservation", "resources"],
+      "properties": {
+        "replicas": {"type": "integer", "minimum": 0, "maximum": 100},
+        "autoscaling": {"type": "object", "additionalProperties": false, "required": ["enabled"], "properties": {"enabled": {"type": "boolean"}}},
+        "pauseAfterReservation": {"type": "boolean"}, "resources": {"$ref": "#/definitions/resources"}
+      }
+    },
+    "web": {"type": "object", "additionalProperties": false, "required": ["replicas", "resources"], "properties": {"replicas": {"type": "integer", "minimum": 1, "maximum": 20}, "resources": {"$ref": "#/definitions/resources"}}},
+    "podAnnotations": {"type": "object", "additionalProperties": {"type": "string"}}
+  },
+  "allOf": [
+    {"if": {"properties": {"database": {"properties": {"disposable": {"properties": {"enabled": {"const": true}}}}}}}, "then": {"properties": {"database": {"properties": {"disposable": {"properties": {"imageDigest": {"$ref": "#/definitions/digest"}}}}}}}, "else": {"properties": {"database": {"properties": {"existingSecret": {"minLength": 1}}}}}},
+    {"if": {"properties": {"database": {"properties": {"disposable": {"properties": {"enabled": {"const": true}}}}}}}, "then": {"properties": {"database": {"properties": {"disposable": {"properties": {"credentialsSecret": {"minLength": 1}}}}}}}}
+  ]
+}

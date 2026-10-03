@@ -1,0 +1,233 @@
+name: Trusted application release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: application-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17.11
+        env:
+          POSTGRES_DB: fleet_test
+          POSTGRES_USER: fleet_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 127.0.0.1:5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fleet_test -d fleet_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.27.1
+          cache-dependency-path: services/go.sum
+      - name: Test Go services with disposable PostgreSQL
+        working-directory: services
+        env:
+          TEST_DATABASE_URL: postgres://fleet_test@127.0.0.1:5432/fleet_test?sslmode=disable
+        run: go test -p 1 ./...
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build operator UI
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.3.0
+      - name: Lint and render application chart
+        run: |
+          helm lint charts/ottawa-fleet -f charts/ottawa-fleet/ci-values.yaml
+          helm template ottawa-fleet charts/ottawa-fleet --namespace release-check -f charts/ottawa-fleet/ci-values.yaml
+          helm template ottawa-fleet charts/ottawa-fleet --namespace release-check -f charts/ottawa-fleet/ci-values.yaml --set worker.autoscaling.enabled=true
+          helm package charts/ottawa-fleet --destination "$RUNNER_TEMP"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ottawa-fleet-helm-chart
+          path: ${{ runner.temp }}/ottawa-fleet-*.tgz
+          if-no-files-found: error
+          retention-days: 90
+
+  publish-go-images:
+    needs: verify
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: db-init
+            app_cmd: db-init
+          - service: fleet-api
+            app_cmd: fleet-api
+          - service: ride-api
+            app_cmd: ride-api
+          - service: assignment-worker
+            app_cmd: assignment-worker
+          - service: scenario-runner
+            app_cmd: scenario-runner
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/anishg-26/ottawa-fleet-app/${{ matrix.service }}
+          tags: |
+            type=ref,event=tag
+            type=sha,format=long
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.title=${{ matrix.service }}
+            org.opencontainers.image.version=${{ github.ref_name }}
+      - uses: docker/build-push-action@v6
+        id: push
+        with:
+          context: .
+          file: deploy/Dockerfile.go
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_CMD=${{ matrix.app_cmd }}
+            BUILD_SERVICE=${{ matrix.service }}
+            BUILD_COMMIT=${{ github.sha }}
+            BUILD_ARCH=amd64
+      - name: Record immutable image identity
+        env:
+          SERVICE: ${{ matrix.service }}
+          IMAGE: ghcr.io/anishg-26/ottawa-fleet-app/${{ matrix.service }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+          COMMIT: ${{ github.sha }}
+          RELEASE: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          record = {
+              "service": os.environ["SERVICE"],
+              "image": os.environ["IMAGE"],
+              "digest": os.environ["DIGEST"],
+              "source_commit": os.environ["COMMIT"],
+              "architecture": "linux/amd64",
+              "release": os.environ["RELEASE"],
+          }
+          with open("release-metadata.json", "w", encoding="utf-8") as f:
+              json.dump(record, f, indent=2)
+              f.write("\n")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
+              f.write(f"- `{record['service']}`: `{record['image']}@{record['digest']}` ({record['source_commit']}, {record['architecture']})\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.service }}
+          path: release-metadata.json
+          if-no-files-found: error
+          retention-days: 90
+
+  publish-web-image:
+    needs: verify
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/anishg-26/ottawa-fleet-app/web
+          tags: |
+            type=ref,event=tag
+            type=sha,format=long
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.title=web
+            org.opencontainers.image.version=${{ github.ref_name }}
+      - uses: docker/build-push-action@v6
+        id: push
+        with:
+          context: .
+          file: deploy/Dockerfile.web
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BUILD_SERVICE=web
+            BUILD_COMMIT=${{ github.sha }}
+            BUILD_ARCH=amd64
+      - name: Record immutable web image identity
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+          COMMIT: ${{ github.sha }}
+          RELEASE: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          record = {
+              "service": "web",
+              "image": "ghcr.io/anishg-26/ottawa-fleet-app/web",
+              "digest": os.environ["DIGEST"],
+              "source_commit": os.environ["COMMIT"],
+              "architecture": "linux/amd64",
+              "release": os.environ["RELEASE"],
+          }
+          with open("release-metadata.json", "w", encoding="utf-8") as f:
+              json.dump(record, f, indent=2)
+              f.write("\n")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
+              f.write(f"- `{record['service']}`: `{record['image']}@{record['digest']}` ({record['source_commit']}, {record['architecture']})\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-web
+          path: release-metadata.json
+          if-no-files-found: error
+          retention-days: 90
