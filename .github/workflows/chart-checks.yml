@@ -139,7 +139,15 @@ jobs:
               migration["metadata"]["name"], changed_migration["metadata"]["name"]
           )
           assert not any(doc.get("kind") == "StatefulSet" for doc in external_database)
-          find(disposable_database, "StatefulSet", "postgres")
+          postgres = find(disposable_database, "StatefulSet", "postgres")
+          pod = postgres["spec"]["template"]["spec"]
+          assert pod["securityContext"]["runAsUser"] == 999, pod["securityContext"]
+          assert pod["securityContext"]["fsGroup"] == 999, pod["securityContext"]
+          postgres_container = next(container for container in pod["containers"] if container["name"] == "postgres")
+          postgres_env = {item["name"]: item.get("value") for item in postgres_container.get("env", [])}
+          assert postgres_env.get("PGDATA") == "/var/lib/postgresql/data/pgdata", postgres_env
+          data_mount = next(mount for mount in postgres_container["volumeMounts"] if mount["name"] == "data")
+          assert data_mount["mountPath"] == "/var/lib/postgresql/data", data_mount
           print("Rendered chart contracts passed")
           PY
 
