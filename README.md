@@ -1,46 +1,55 @@
 # Ottawa Fleet Application
 
-A small mock application for learning platform operations: synthetic fleet availability, ride requests, queued assignments and an operator UI. During a Lansdowne demand surge, observe backlog, degrade an API, stop/restart a worker and verify recovery.
+A local mock application for learning platform operations: synthetic Ottawa
+fleet availability, durable ride requests, assignment work, and an operator UI.
+Use the Compose stack to observe demand, backlog, bounded API faults, and worker
+recovery without external accounts or infrastructure.
 
-**Status: v1 API/job contracts and executable fixtures are defined for review. No runnable API, UI, worker, Docker image, Compose stack or Helm chart exists yet.**
+**Phase 1 runtime is implemented:** Fleet and Ride APIs, PostgreSQL migrations,
+assignment worker, TypeScript operator UI, bounded scenario CLI, Dockerfiles,
+local Compose, and application CI. Follow [local development](docs/local-development.md)
+to start and validate the stack. Phase 2 image publishing and Helm release work
+remain separate tickets.
+
+Optional local LGTM telemetry is described in [telemetry setup](docs/telemetry.md).
 
 ## Ownership
 
-The Application team owns Go services, UI, contracts, migrations, Docker/Compose and the application Helm chart. The [Platform team](https://github.com/ANISHG-26/ottawa-fleet-platform) owns infrastructure, Argo CD, environment values/version pins, KEDA, Istio, Terraform and operating evidence. Both use the [same board](https://github.com/users/ANISHG-26/projects/6).
+The Application team owns Go services, UI, contracts, migrations, Docker/Compose,
+and the application Helm chart. The [Platform team](https://github.com/ANISHG-26/ottawa-fleet-platform)
+owns infrastructure, Argo CD, environment values/version pins, KEDA, Istio,
+Terraform, and operating evidence. Both use the [same board](https://github.com/users/ANISHG-26/projects/6).
 
-All business data is synthetic. No real vehicle control, routing optimization, payments or safety decisions are in scope.
+All business data is synthetic. No real vehicle control, routing optimization,
+payments, or safety decisions are in scope.
 
-## Planned structure
+## Repository layout
 
 ```text
-services/   # One Go module: cmd/{fleet-api,ride-api,assignment-worker,scenario-runner}, internal/
-web/        # Small TypeScript operator UI; framework chosen in UI ticket
+services/   # One Go module: fleet-api, ride-api, assignment-worker, scenario-runner
+web/        # TypeScript operator UI, fixture and browser checks
 contracts/  # Versioned OpenAPI/job schemas and fixtures
-db/         # Service-owned PostgreSQL migrations and synthetic seeds
-deploy/     # Application Dockerfiles and local Compose configuration
-charts/     # Versioned application Helm package in Phase 2
-tests/      # Integration and user-journey checks
-scripts/    # Current scaffold validation; future developer commands
-docs/       # Application design and links to shared delivery contracts
-.github/    # Issue/PR templates and documentation CI
+db/         # Fleet and ride PostgreSQL migrations
+deploy/     # Dockerfiles and local Compose configuration
+charts/     # Versioned application Helm package for Phase 2
+tests/      # Cross-service checks and run instructions
+scripts/    # Contract, repository, and developer commands
+docs/       # Architecture, phase plan, and local runbook
+.github/    # Repository and application CI
 ```
 
-The [v1 contract](contracts/README.md) defines API/job behavior and schema validation. Future service unit tests live beside Go packages; cross-service checks live in `tests/`.
+The [v1 contract](contracts/README.md) defines API/job behavior and validation.
+See [application architecture](docs/architecture.md), [Phase 1 ticket map](docs/phase-1.md),
+and [contributing](CONTRIBUTING.md) for the implementation boundaries.
 
-## Start here
-
-- [Application architecture](docs/architecture.md)
-- [Phase 1 and ticket map](docs/phase-1.md)
-- [Contributing](CONTRIBUTING.md)
-- [Shared delivery workflow](https://github.com/ANISHG-26/ottawa-fleet-platform/blob/codex/bootstrap-platform/docs/project-management.md)
-- [Application/platform release contract](https://github.com/ANISHG-26/ottawa-fleet-platform/blob/codex/bootstrap-platform/docs/application-release-contract.md)
-
-Shared documents currently live on the platform foundation review branch; switch those links to main after that PR merges. Main does not yet contain them.
-
-## Validate this scaffold
+## Validate
 
 ```sh
-python scripts/check_repository.py
+python -m pip install -r scripts/requirements-contracts.txt
+python scripts/dev.py check
 ```
 
-This checks documentation and JSON. Follow the [contract validation commands](contracts/README.md#validation-and-changes) for OpenAPI and positive/negative fixtures; CI runs both checks. Runtime application behavior still requires later tickets. Phase 1 delivers local startup and CI. Helm packaging and release publishing follow in Phase 2; Kubernetes, cloud and model access are not prerequisites.
+CI runs the same Go formatting/vet/unit/integration checks, contract validation,
+UI tests/build, and fixture browser smoke. Database tests use a disposable
+PostgreSQL service; local runs skip them explicitly when `TEST_DATABASE_URL` is
+unset. Kubernetes, cloud resources, and model access are not Phase 1 needs.

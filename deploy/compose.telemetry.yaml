@@ -1,0 +1,44 @@
+# Optional overlay. Start the base app first (it creates the shared network),
+# start the platform telemetry stack, then run this overlay.
+services:
+  telemetry-log-init:
+    image: busybox:1.37.0
+    user: "0:0"
+    command: ["sh", "-c", "chown -R 10001:10001 /var/log/fleet && chmod 0755 /var/log/fleet"]
+    volumes:
+      - telemetry_logs:/var/log/fleet
+    restart: "no"
+
+  fleet-api:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
+      LOG_FILE: /var/log/fleet/fleet-api.jsonl
+    depends_on:
+      telemetry-log-init:
+        condition: service_completed_successfully
+    volumes:
+      - telemetry_logs:/var/log/fleet
+
+  ride-api:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
+      LOG_FILE: /var/log/fleet/ride-api.jsonl
+    depends_on:
+      telemetry-log-init:
+        condition: service_completed_successfully
+    volumes:
+      - telemetry_logs:/var/log/fleet
+
+  assignment-worker:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
+      LOG_FILE: /var/log/fleet/assignment-worker.jsonl
+    depends_on:
+      telemetry-log-init:
+        condition: service_completed_successfully
+    volumes:
+      - telemetry_logs:/var/log/fleet
+
+volumes:
+  telemetry_logs:
+    name: ottawa-fleet-app-telemetry-logs
