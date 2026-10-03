@@ -1,0 +1,118 @@
+name: Docker Compose checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "deploy/**"
+      - "services/**"
+      - "db/**"
+      - "web/**"
+      - ".dockerignore"
+      - ".github/workflows/docker-checks.yml"
+  pull_request:
+    paths:
+      - "deploy/**"
+      - "services/**"
+      - "db/**"
+      - "web/**"
+      - ".dockerignore"
+      - ".github/workflows/docker-checks.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Create isolated Compose names
+        shell: bash
+        run: |
+          project="ottawa-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          password="$(openssl rand -hex 24)"
+          printf '::add-mask::%s\n' "$password"
+          printf 'COMPOSE_PROJECT=%s\n' "$project" >> "$GITHUB_ENV"
+          printf 'POSTGRES_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
+          cat > "$RUNNER_TEMP/compose-ci.yaml" <<EOF
+          volumes:
+            fleet_data:
+              name: ${project}-fleet-data
+          networks:
+            app:
+              name: ${project}-app
+          EOF
+
+      - name: Build and start base Compose stack
+        run: >-
+          docker compose -p "$COMPOSE_PROJECT" -f deploy/compose.yaml
+          -f "$RUNNER_TEMP/compose-ci.yaml" up --detach --build --wait
+          --wait-timeout 240
+
+      - name: Verify synthetic ride acceptance, replay, and completion
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import time
+          import urllib.request
+
+          base = "http://127.0.0.1:8081"
+          request_body = json.dumps({
+              "pickup_zone": "lansdowne",
+              "dropoff_zone": "centretown",
+              "passengers": 2,
+          }).encode()
+          key = "compose_ci_ride_001"
+
+          def call(path, method="GET", body=None):
+              headers = {"Accept": "application/json"}
+              if body is not None:
+                  headers["Content-Type"] = "application/json"
+              if method == "POST":
+                  headers["Idempotency-Key"] = key
+              request = urllib.request.Request(base + path, data=body, headers=headers, method=method)
+              with urllib.request.urlopen(request, timeout=5) as response:
+                  return response.status, json.load(response)
+
+          status, first = call("/v1/rides", "POST", request_body)
+          assert status == 202, f"ride submission returned HTTP {status}"
+          ride_id = first.get("ride_id")
+          assert isinstance(ride_id, str) and ride_id, f"missing ride_id: {first}"
+
+          status, replay = call("/v1/rides", "POST", request_body)
+          assert status == 202 and replay.get("ride_id") == ride_id, (
+              f"idempotent replay changed ride identity: {replay}"
+          )
+
+          deadline = time.monotonic() + 90
+          while time.monotonic() < deadline:
+              status, ride = call("/v1/rides/" + ride_id)
+              if status == 200 and ride.get("state") == "completed":
+                  assert ride.get("vehicle_id"), f"completed ride has no vehicle: {ride}"
+                  print(f"synthetic ride {ride_id} completed with {ride['vehicle_id']}")
+                  break
+              if status == 200 and ride.get("state") == "failed":
+                  raise AssertionError(f"synthetic ride failed: {ride}")
+              time.sleep(2)
+          else:
+              raise TimeoutError(f"ride {ride_id} did not complete within 90 seconds")
+          PY
+
+      - name: Show Compose state on failure
+        if: failure()
+        run: docker compose -p "$COMPOSE_PROJECT" -f deploy/compose.yaml -f "$RUNNER_TEMP/compose-ci.yaml" ps --all
+
+      - name: Remove this run's Compose resources
+        if: always() && env.COMPOSE_PROJECT != ''
+        run: docker compose -p "$COMPOSE_PROJECT" -f deploy/compose.yaml -f "$RUNNER_TEMP/compose-ci.yaml" down --volumes --remove-orphans
