@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anishg-26.github.io/ottawa-fleet-app/contracts/v1/job.schema.json",
+  "title": "Assignment job v1 (logical record, not DDL)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "job_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,63}$"
+    },
+    "ride_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,63}$"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,63}$"
+    },
+    "kind": {
+      "const": "assign_ride"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pickup_zone": {
+          "type": "string",
+          "enum": [
+            "centretown",
+            "glebe",
+            "lansdowne",
+            "byward-market"
+          ]
+        },
+        "dropoff_zone": {
+          "type": "string",
+          "enum": [
+            "centretown",
+            "glebe",
+            "lansdowne",
+            "byward-market"
+          ]
+        },
+        "passengers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        }
+      },
+      "required": [
+        "pickup_zone",
+        "dropoff_zone",
+        "passengers"
+      ]
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "processing",
+        "completed",
+        "failed"
+      ]
+    },
+    "attempts": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "max_attempts": {
+      "const": 5
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "available_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "lease_owner": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,63}$"
+    },
+    "lease_token": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,63}$"
+    },
+    "lease_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "vehicle_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,63}$"
+    },
+    "failure_code": {
+      "type": "string",
+      "enum": [
+        "no_capacity",
+        "retry_exhausted",
+        "invalid_job"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "job_id",
+    "ride_id",
+    "request_id",
+    "kind",
+    "payload",
+    "state",
+    "attempts",
+    "max_attempts",
+    "created_at",
+    "updated_at",
+    "available_at"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "processing"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "lease_owner",
+          "lease_token",
+          "lease_expires_at"
+        ],
+        "properties": {
+          "attempts": {
+            "minimum": 1
+          }
+        }
+      },
+      "else": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "lease_owner"
+              ]
+            },
+            {
+              "required": [
+                "lease_token"
+              ]
+            },
+            {
+              "required": [
+                "lease_expires_at"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "queued"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "attempts": {
+            "maximum": 4
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "completed"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "vehicle_id"
+        ],
+        "not": {
+          "required": [
+            "failure_code"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "failed"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "failure_code"
+        ],
+        "not": {
+          "required": [
+            "vehicle_id"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "enum": [
+              "queued",
+              "processing"
+            ]
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "vehicle_id"
+              ]
+            },
+            {
+              "required": [
+                "failure_code"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

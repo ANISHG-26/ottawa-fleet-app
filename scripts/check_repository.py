@@ -26,7 +26,7 @@ for name in REQUIRED:
     if not (ROOT / name).is_file():
         errors.append(f"Missing required file: {name}")
 for path in ROOT.rglob("*.md"):
-    if ".git" in path.parts:
+    if any(part in {".git", ".venv", ".venv-contracts", "node_modules"} for part in path.parts):
         continue
     for target in re.findall(r"\[[^\]]*\]\(([^\s)]+)\)", path.read_text(encoding="utf-8")):
         if target.startswith(("https://", "http://", "mailto:", "#")):
@@ -36,7 +36,7 @@ for path in ROOT.rglob("*.md"):
         if not candidate.is_relative_to(ROOT) or not candidate.exists():
             errors.append(f"{path.relative_to(ROOT)}: invalid local link {target}")
 for path in ROOT.rglob("*.json"):
-    if ".git" in path.parts:
+    if any(part in {".git", ".venv", ".venv-contracts", "node_modules"} for part in path.parts):
         continue
     try:
         json.loads(path.read_text(encoding="utf-8"))

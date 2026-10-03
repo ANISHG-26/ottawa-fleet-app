@@ -31,4 +31,4 @@ Phase 1 delivers application Dockerfiles and local Compose with explicit initial
 
 Phase 2 adds immutable images and a versioned application Helm chart. Platform owns environment values, deployment pins, namespace policy and controllers. Never duplicate application templates into platform. Chart defaults must later allow an autoscaler to own replicas.
 
-No executable contract, runtime service, container or chart exists yet. The [Phase 1 plan](phase-1.md) tracks delivery and evidence.
+The [v1 contract and fixtures](../contracts/README.md) define API, freshness, reservation and job recovery rules. No runtime service, container or chart exists yet. The [Phase 1 plan](phase-1.md) tracks delivery and evidence.
