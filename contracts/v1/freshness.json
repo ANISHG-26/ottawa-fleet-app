@@ -1,0 +1,30 @@
+[
+  {
+    "name": "fresh",
+    "as_of": "2026-10-03T12:00:00Z",
+    "observed_at": "2026-10-03T12:00:00Z",
+    "stored": "available",
+    "effective": "available"
+  },
+  {
+    "name": "boundary included",
+    "as_of": "2026-10-03T12:00:00Z",
+    "observed_at": "2026-10-03T11:59:30Z",
+    "stored": "available",
+    "effective": "available"
+  },
+  {
+    "name": "stale",
+    "as_of": "2026-10-03T12:00:00Z",
+    "observed_at": "2026-10-03T11:59:29Z",
+    "stored": "available",
+    "effective": "unknown"
+  },
+  {
+    "name": "future",
+    "as_of": "2026-10-03T12:00:00Z",
+    "observed_at": "2026-10-03T12:00:01Z",
+    "stored": "available",
+    "effective": "unknown"
+  }
+]

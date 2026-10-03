@@ -1,0 +1,691 @@
+[
+  {
+    "name": "RideRequest: valid",
+    "schema": "RideRequest",
+    "valid": true,
+    "value": {
+      "pickup_zone": "lansdowne",
+      "dropoff_zone": "centretown",
+      "passengers": 2
+    }
+  },
+  {
+    "name": "RideRequest: rejects unknown field",
+    "schema": "RideRequest",
+    "valid": false,
+    "value": {
+      "pickup_zone": "lansdowne",
+      "dropoff_zone": "centretown",
+      "passengers": 2,
+      "unexpected": true
+    }
+  },
+  {
+    "name": "Vehicle: valid",
+    "schema": "Vehicle",
+    "valid": true,
+    "value": {
+      "vehicle_id": "vehicle-001",
+      "zone": "lansdowne",
+      "seats": 4,
+      "availability": "available",
+      "observed_at": "2026-10-03T12:00:00Z"
+    }
+  },
+  {
+    "name": "Vehicle: rejects unknown field",
+    "schema": "Vehicle",
+    "valid": false,
+    "value": {
+      "vehicle_id": "vehicle-001",
+      "zone": "lansdowne",
+      "seats": 4,
+      "availability": "available",
+      "observed_at": "2026-10-03T12:00:00Z",
+      "unexpected": true
+    }
+  },
+  {
+    "name": "Reservation: valid",
+    "schema": "Reservation",
+    "valid": true,
+    "value": {
+      "ride_id": "ride-001",
+      "vehicle_id": "vehicle-001",
+      "state": "reserved",
+      "reserved_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z"
+    }
+  },
+  {
+    "name": "Reservation: rejects unknown field",
+    "schema": "Reservation",
+    "valid": false,
+    "value": {
+      "ride_id": "ride-001",
+      "vehicle_id": "vehicle-001",
+      "state": "reserved",
+      "reserved_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "unexpected": true
+    }
+  },
+  {
+    "name": "Error: valid",
+    "schema": "Error",
+    "valid": true,
+    "value": {
+      "code": "invalid_request",
+      "message": "passengers must be between 1 and 4",
+      "request_id": "req-001"
+    }
+  },
+  {
+    "name": "Error: rejects unknown field",
+    "schema": "Error",
+    "valid": false,
+    "value": {
+      "code": "invalid_request",
+      "message": "passengers must be between 1 and 4",
+      "request_id": "req-001",
+      "unexpected": true
+    }
+  },
+  {
+    "name": "Ride: valid",
+    "schema": "Ride",
+    "valid": true,
+    "value": {
+      "ride_id": "ride-001",
+      "pickup_zone": "lansdowne",
+      "dropoff_zone": "centretown",
+      "passengers": 2,
+      "state": "queued",
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z"
+    }
+  },
+  {
+    "name": "Ride: rejects unknown field",
+    "schema": "Ride",
+    "valid": false,
+    "value": {
+      "ride_id": "ride-001",
+      "pickup_zone": "lansdowne",
+      "dropoff_zone": "centretown",
+      "passengers": 2,
+      "state": "queued",
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "unexpected": true
+    }
+  },
+  {
+    "name": "FleetPage: valid",
+    "schema": "FleetPage",
+    "valid": true,
+    "value": {
+      "items": [
+        {
+          "vehicle_id": "vehicle-001",
+          "zone": "lansdowne",
+          "seats": 4,
+          "availability": "available",
+          "observed_at": "2026-10-03T12:00:00Z"
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-03T12:00:00Z"
+    }
+  },
+  {
+    "name": "FleetPage: rejects unknown field",
+    "schema": "FleetPage",
+    "valid": false,
+    "value": {
+      "items": [
+        {
+          "vehicle_id": "vehicle-001",
+          "zone": "lansdowne",
+          "seats": 4,
+          "availability": "available",
+          "observed_at": "2026-10-03T12:00:00Z"
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-03T12:00:00Z",
+      "unexpected": true
+    }
+  },
+  {
+    "name": "RidePage: valid",
+    "schema": "RidePage",
+    "valid": true,
+    "value": {
+      "items": [
+        {
+          "ride_id": "ride-001",
+          "pickup_zone": "lansdowne",
+          "dropoff_zone": "centretown",
+          "passengers": 2,
+          "state": "queued",
+          "created_at": "2026-10-03T12:00:00Z",
+          "updated_at": "2026-10-03T12:00:00Z"
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-03T12:00:00Z"
+    }
+  },
+  {
+    "name": "RidePage: rejects unknown field",
+    "schema": "RidePage",
+    "valid": false,
+    "value": {
+      "items": [
+        {
+          "ride_id": "ride-001",
+          "pickup_zone": "lansdowne",
+          "dropoff_zone": "centretown",
+          "passengers": 2,
+          "state": "queued",
+          "created_at": "2026-10-03T12:00:00Z",
+          "updated_at": "2026-10-03T12:00:00Z"
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-03T12:00:00Z",
+      "unexpected": true
+    }
+  },
+  {
+    "name": "ReserveRequest: valid",
+    "schema": "ReserveRequest",
+    "valid": true,
+    "value": {
+      "ride_id": "ride-001",
+      "pickup_zone": "lansdowne",
+      "passengers": 2
+    }
+  },
+  {
+    "name": "ReserveRequest: rejects unknown field",
+    "schema": "ReserveRequest",
+    "valid": false,
+    "value": {
+      "ride_id": "ride-001",
+      "pickup_zone": "lansdowne",
+      "passengers": 2,
+      "unexpected": true
+    }
+  },
+  {
+    "name": "Probe: valid",
+    "schema": "Probe",
+    "valid": true,
+    "value": {
+      "status": "ok"
+    }
+  },
+  {
+    "name": "Probe: rejects unknown field",
+    "schema": "Probe",
+    "valid": false,
+    "value": {
+      "status": "ok",
+      "unexpected": true
+    }
+  },
+  {
+    "name": "Job: valid",
+    "schema": "Job",
+    "valid": true,
+    "value": {
+      "schema_version": "1.0.0",
+      "job_id": "job-001",
+      "ride_id": "ride-001",
+      "request_id": "req-001",
+      "kind": "assign_ride",
+      "payload": {
+        "pickup_zone": "lansdowne",
+        "dropoff_zone": "centretown",
+        "passengers": 2
+      },
+      "state": "queued",
+      "attempts": 0,
+      "max_attempts": 5,
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "available_at": "2026-10-03T12:00:00Z"
+    }
+  },
+  {
+    "name": "Job: rejects unknown field",
+    "schema": "Job",
+    "valid": false,
+    "value": {
+      "schema_version": "1.0.0",
+      "job_id": "job-001",
+      "ride_id": "ride-001",
+      "request_id": "req-001",
+      "kind": "assign_ride",
+      "payload": {
+        "pickup_zone": "lansdowne",
+        "dropoff_zone": "centretown",
+        "passengers": 2
+      },
+      "state": "queued",
+      "attempts": 0,
+      "max_attempts": 5,
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "available_at": "2026-10-03T12:00:00Z",
+      "unexpected": true
+    }
+  },
+  {
+    "name": "ride processing",
+    "schema": "Ride",
+    "valid": true,
+    "value": {
+      "ride_id": "ride-001",
+      "pickup_zone": "lansdowne",
+      "dropoff_zone": "centretown",
+      "passengers": 2,
+      "state": "processing",
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z"
+    }
+  },
+  {
+    "name": "job processing",
+    "schema": "Job",
+    "valid": true,
+    "value": {
+      "schema_version": "1.0.0",
+      "job_id": "job-001",
+      "ride_id": "ride-001",
+      "request_id": "req-001",
+      "kind": "assign_ride",
+      "payload": {
+        "pickup_zone": "lansdowne",
+        "dropoff_zone": "centretown",
+        "passengers": 2
+      },
+      "state": "processing",
+      "attempts": 1,
+      "max_attempts": 5,
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "available_at": "2026-10-03T12:00:00Z",
+      "lease_owner": "worker-001",
+      "lease_token": "lease-001",
+      "lease_expires_at": "2026-10-03T12:00:30Z"
+    }
+  },
+  {
+    "name": "ride completed",
+    "schema": "Ride",
+    "valid": true,
+    "value": {
+      "ride_id": "ride-001",
+      "pickup_zone": "lansdowne",
+      "dropoff_zone": "centretown",
+      "passengers": 2,
+      "state": "completed",
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "vehicle_id": "vehicle-001"
+    }
+  },
+  {
+    "name": "job completed",
+    "schema": "Job",
+    "valid": true,
+    "value": {
+      "schema_version": "1.0.0",
+      "job_id": "job-001",
+      "ride_id": "ride-001",
+      "request_id": "req-001",
+      "kind": "assign_ride",
+      "payload": {
+        "pickup_zone": "lansdowne",
+        "dropoff_zone": "centretown",
+        "passengers": 2
+      },
+      "state": "completed",
+      "attempts": 1,
+      "max_attempts": 5,
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "available_at": "2026-10-03T12:00:00Z",
+      "vehicle_id": "vehicle-001"
+    }
+  },
+  {
+    "name": "ride failed",
+    "schema": "Ride",
+    "valid": true,
+    "value": {
+      "ride_id": "ride-001",
+      "pickup_zone": "lansdowne",
+      "dropoff_zone": "centretown",
+      "passengers": 2,
+      "state": "failed",
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "failure_code": "no_capacity"
+    }
+  },
+  {
+    "name": "job failed",
+    "schema": "Job",
+    "valid": true,
+    "value": {
+      "schema_version": "1.0.0",
+      "job_id": "job-001",
+      "ride_id": "ride-001",
+      "request_id": "req-001",
+      "kind": "assign_ride",
+      "payload": {
+        "pickup_zone": "lansdowne",
+        "dropoff_zone": "centretown",
+        "passengers": 2
+      },
+      "state": "failed",
+      "attempts": 1,
+      "max_attempts": 5,
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "available_at": "2026-10-03T12:00:00Z",
+      "failure_code": "no_capacity"
+    }
+  },
+  {
+    "name": "passenger ceiling",
+    "schema": "RideRequest",
+    "valid": false,
+    "value": {
+      "pickup_zone": "lansdowne",
+      "dropoff_zone": "centretown",
+      "passengers": 5
+    }
+  },
+  {
+    "name": "unknown zone",
+    "schema": "RideRequest",
+    "valid": false,
+    "value": {
+      "pickup_zone": "toronto",
+      "dropoff_zone": "centretown",
+      "passengers": 2
+    }
+  },
+  {
+    "name": "completed ride lacks assignment",
+    "schema": "Ride",
+    "valid": false,
+    "value": {
+      "ride_id": "ride-001",
+      "pickup_zone": "lansdowne",
+      "dropoff_zone": "centretown",
+      "passengers": 2,
+      "state": "completed",
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z"
+    }
+  },
+  {
+    "name": "failed ride lacks reason",
+    "schema": "Ride",
+    "valid": false,
+    "value": {
+      "ride_id": "ride-001",
+      "pickup_zone": "lansdowne",
+      "dropoff_zone": "centretown",
+      "passengers": 2,
+      "state": "failed",
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z"
+    }
+  },
+  {
+    "name": "processing job lacks lease",
+    "schema": "Job",
+    "valid": false,
+    "value": {
+      "schema_version": "1.0.0",
+      "job_id": "job-001",
+      "ride_id": "ride-001",
+      "request_id": "req-001",
+      "kind": "assign_ride",
+      "payload": {
+        "pickup_zone": "lansdowne",
+        "dropoff_zone": "centretown",
+        "passengers": 2
+      },
+      "state": "processing",
+      "attempts": 1,
+      "max_attempts": 5,
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "available_at": "2026-10-03T12:00:00Z"
+    }
+  },
+  {
+    "name": "retry ceiling",
+    "schema": "Job",
+    "valid": false,
+    "value": {
+      "schema_version": "1.0.0",
+      "job_id": "job-001",
+      "ride_id": "ride-001",
+      "request_id": "req-001",
+      "kind": "assign_ride",
+      "payload": {
+        "pickup_zone": "lansdowne",
+        "dropoff_zone": "centretown",
+        "passengers": 2
+      },
+      "state": "queued",
+      "attempts": 6,
+      "max_attempts": 5,
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "available_at": "2026-10-03T12:00:00Z"
+    }
+  },
+  {
+    "name": "exhausted job cannot queue",
+    "schema": "Job",
+    "valid": false,
+    "value": {
+      "schema_version": "1.0.0",
+      "job_id": "job-001",
+      "ride_id": "ride-001",
+      "request_id": "req-001",
+      "kind": "assign_ride",
+      "payload": {
+        "pickup_zone": "lansdowne",
+        "dropoff_zone": "centretown",
+        "passengers": 2
+      },
+      "state": "queued",
+      "attempts": 5,
+      "max_attempts": 5,
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "available_at": "2026-10-03T12:00:00Z"
+    }
+  },
+  {
+    "name": "queued job cannot retain lease",
+    "schema": "Job",
+    "valid": false,
+    "value": {
+      "schema_version": "1.0.0",
+      "job_id": "job-001",
+      "ride_id": "ride-001",
+      "request_id": "req-001",
+      "kind": "assign_ride",
+      "payload": {
+        "pickup_zone": "lansdowne",
+        "dropoff_zone": "centretown",
+        "passengers": 2
+      },
+      "state": "queued",
+      "attempts": 0,
+      "max_attempts": 5,
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "available_at": "2026-10-03T12:00:00Z",
+      "lease_token": "lease-001"
+    }
+  },
+  {
+    "name": "timestamp requires timezone",
+    "schema": "Vehicle",
+    "valid": false,
+    "value": {
+      "vehicle_id": "vehicle-001",
+      "zone": "lansdowne",
+      "seats": 4,
+      "availability": "available",
+      "observed_at": "2026-10-03T12:00:00"
+    }
+  },
+  {
+    "name": "invalid calendar date",
+    "schema": "Vehicle",
+    "valid": false,
+    "value": {
+      "vehicle_id": "vehicle-001",
+      "zone": "lansdowne",
+      "seats": 4,
+      "availability": "available",
+      "observed_at": "2026-02-30T12:00:00Z"
+    }
+  },
+  {
+    "name": "stale vehicle is unknown",
+    "schema": "Vehicle",
+    "valid": true,
+    "value": {
+      "vehicle_id": "vehicle-001",
+      "zone": "lansdowne",
+      "seats": 4,
+      "availability": "unknown",
+      "observed_at": "2026-10-03T11:59:29Z"
+    }
+  },
+  {
+    "name": "completed job cannot also fail",
+    "schema": "Job",
+    "valid": false,
+    "value": {
+      "schema_version": "1.0.0",
+      "job_id": "job-001",
+      "ride_id": "ride-001",
+      "request_id": "req-001",
+      "kind": "assign_ride",
+      "payload": {
+        "pickup_zone": "lansdowne",
+        "dropoff_zone": "centretown",
+        "passengers": 2
+      },
+      "state": "completed",
+      "attempts": 1,
+      "max_attempts": 5,
+      "created_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "available_at": "2026-10-03T12:00:00Z",
+      "vehicle_id": "vehicle-001",
+      "failure_code": "no_capacity"
+    }
+  },
+  {
+    "name": "released reservation",
+    "schema": "Reservation",
+    "valid": true,
+    "value": {
+      "ride_id": "ride-001",
+      "vehicle_id": "vehicle-001",
+      "state": "released",
+      "reserved_at": "2026-10-03T12:00:00Z",
+      "updated_at": "2026-10-03T12:00:00Z"
+    }
+  },
+  {
+    "name": "release before reservation creates tombstone",
+    "schema": "Reservation",
+    "valid": true,
+    "value": {
+      "ride_id": "ride-001",
+      "state": "released",
+      "updated_at": "2026-10-03T12:00:00Z"
+    }
+  },
+  {
+    "name": "reserved requires vehicle",
+    "schema": "Reservation",
+    "valid": false,
+    "value": {
+      "ride_id": "ride-001",
+      "state": "reserved",
+      "updated_at": "2026-10-03T12:00:00Z"
+    }
+  },
+  {
+    "name": "UI initial fleet",
+    "schema": "FleetPage",
+    "valid": true,
+    "value": {
+      "items": [
+        {
+          "vehicle_id": "vehicle-001",
+          "zone": "lansdowne",
+          "seats": 4,
+          "availability": "available",
+          "observed_at": "2026-10-03T12:00:00Z"
+        },
+        {
+          "vehicle_id": "vehicle-002",
+          "zone": "lansdowne",
+          "seats": 4,
+          "availability": "available",
+          "observed_at": "2026-10-03T12:00:00Z"
+        },
+        {
+          "vehicle_id": "vehicle-003",
+          "zone": "centretown",
+          "seats": 4,
+          "availability": "available",
+          "observed_at": "2026-10-03T12:00:00Z"
+        },
+        {
+          "vehicle_id": "vehicle-004",
+          "zone": "centretown",
+          "seats": 4,
+          "availability": "available",
+          "observed_at": "2026-10-03T12:00:00Z"
+        },
+        {
+          "vehicle_id": "vehicle-005",
+          "zone": "glebe",
+          "seats": 4,
+          "availability": "available",
+          "observed_at": "2026-10-03T12:00:00Z"
+        },
+        {
+          "vehicle_id": "vehicle-006",
+          "zone": "byward-market",
+          "seats": 4,
+          "availability": "unknown",
+          "observed_at": "2026-10-03T11:59:29Z"
+        }
+      ],
+      "next_cursor": null,
+      "as_of": "2026-10-03T12:00:00Z"
+    }
+  }
+]

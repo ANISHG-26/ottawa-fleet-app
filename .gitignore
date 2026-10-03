@@ -21,6 +21,7 @@ dist/
 build/
 coverage/
 .venv/
+.venv-contracts/
 __pycache__/
 *.pyc
 artifacts/

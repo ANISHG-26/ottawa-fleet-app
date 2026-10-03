@@ -19,3 +19,12 @@ jobs:
           persist-credentials: false
       - name: Check documentation and configuration
         run: python3 scripts/check_repository.py
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install contract validators
+        run: python -m pip install -r scripts/requirements-contracts.txt
+      - name: Check generated contracts and positive/negative examples
+        run: |
+          python scripts/build_contracts.py --check
+          python scripts/check_contracts.py
