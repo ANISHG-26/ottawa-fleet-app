@@ -96,7 +96,7 @@ jobs:
           PY
 
           helm package "$chart" --destination "$RUNNER_TEMP"
-          helm show chart "$RUNNER_TEMP/ottawa-fleet-0.1.0.tgz" >/dev/null
+          helm show chart "$RUNNER_TEMP/ottawa-fleet-0.1.1.tgz" >/dev/null
 
           python - "$RUNNER_TEMP" <<'PY'
           import pathlib
