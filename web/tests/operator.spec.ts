@@ -24,6 +24,7 @@ test('fixture operator flow labels synthetic data and enforces idempotent ride s
 
 test('Ottawa fleet map shows approximate zone counts and recovers after a tile outage', async ({ page }) => {
   let tilesBlocked = true;
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.route('https://tile.openstreetmap.org/**', route => tilesBlocked
     ? route.abort()
     : route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="#d8e3d9"/></svg>' }));
@@ -39,6 +40,22 @@ test('Ottawa fleet map shows approximate zone counts and recovers after a tile o
   await expect(page.locator('#zone-locations li').filter({ hasText: 'ByWard Market' })).toContainText('1 vehicle · 0 available · 1 unknown');
   await expect(page.getByText(/map tiles are unavailable/i)).toBeVisible({ timeout: 10_000 });
   await expect(page.getByRole('button', { name: 'Submit ride' })).toBeEnabled();
+
+  async function expectGlebeAndLansdowneLabelsClearOfEachOtherAndInsideMap() {
+    await expect.poll(async () => {
+      const mapBox = await map.boundingBox();
+      const glebeBox = await page.locator('.map-zone-icon-west').boundingBox();
+      const lansdowneBox = await page.locator('.map-zone-icon-east').boundingBox();
+      return Boolean(mapBox && glebeBox && lansdowneBox
+        && glebeBox.x + glebeBox.width < lansdowneBox.x
+        && glebeBox.x >= mapBox.x
+        && lansdowneBox.x + lansdowneBox.width <= mapBox.x + mapBox.width);
+    }).toBe(true);
+  }
+
+  await expectGlebeAndLansdowneLabelsClearOfEachOtherAndInsideMap();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expectGlebeAndLansdowneLabelsClearOfEachOtherAndInsideMap();
 
   tilesBlocked = false;
   await page.getByRole('button', { name: 'Zoom in' }).click();

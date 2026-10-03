@@ -153,7 +153,7 @@ function render() {
   document.querySelector('#summary')!.innerHTML = [
     ['Vehicles observed', vehicles.length.toString(), `${available} available · ${unknown} unknown`, '◉'],
     [fleetSnapshot.state === 'stale' ? 'Last known available' : 'Available now', fleetSnapshot.state === 'loading' || fleetSnapshot.state === 'unavailable' ? '—' : available.toString(), fleetSnapshot.state === 'stale' ? `At ${formatTime(fleetSnapshot.asOf)}` : 'Fresh observations only', '⌖'],
-    ['Active rides', rideSnapshot.state === 'loading' || rideSnapshot.state === 'unavailable' ? '—' : rides.length.toString(), `${pending} queued or processing`, '↗'],
+    ['Rides recorded', rideSnapshot.state === 'loading' || rideSnapshot.state === 'unavailable' ? '—' : rides.length.toString(), `${pending} queued or processing`, '↗'],
     ['Fleet as of', fleetSnapshot.asOf ? formatTime(fleetSnapshot.asOf) : '—', 'Fleet API contract clock', '◷']
   ].map(([title, value, note, icon]) => `<article class="metric-card"><div class="metric-top"><span>${title}</span><b>${icon}</b></div><strong>${value}</strong><small>${note}</small></article>`).join('');
 
@@ -174,7 +174,7 @@ function render() {
     const marker = zoneMarkers.get(zone);
     marker?.setIcon(L.divIcon({
       className: 'map-zone-icon-shell',
-      html: `<span class="map-zone-icon" role="img" aria-label="${name}: ${knownSummary}"><b>${countLabel}</b><small>${name}</small></span>`,
+      html: `<span class="map-zone-icon map-zone-icon-${zone === 'glebe' ? 'west' : zone === 'lansdowne' ? 'east' : 'center'}" role="img" aria-label="${name}: ${knownSummary}"><b>${countLabel}</b><small>${name}</small></span>`,
       iconSize: [114, 48],
       iconAnchor: [57, 24]
     }));
