@@ -1,0 +1,34 @@
+# Credentials and private local state
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*credentials*.json
+*service-account*.json
+.private/
+private/
+private-planning/
+.gcloud/
+.kube/
+terraform.tfstate*
+*.tfvars
+!*.tfvars.example
+.terraform/
+# Generated assets
+node_modules/
+dist/
+build/
+coverage/
+.venv/
+__pycache__/
+*.pyc
+artifacts/
+.DS_Store
+Thumbs.db
+
+# Application binaries and local databases
+*.exe
+*.test
+*.out
+.local-data/
