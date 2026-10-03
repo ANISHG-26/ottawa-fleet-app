@@ -9,4 +9,4 @@ Use the shared board's Application team and relevant Phase filter. Start with on
 5. Open a focused draft PR and move review stage to In review. Record actual evidence and limitations.
 6. Wait for human merge authorization. Close only after acceptance is demonstrated and delivery is merged.
 
-Documentation/scaffolding uses `python scripts/check_repository.py`; it does not prove application behavior. No runtime tests exist yet. UI fixture tests may be developed before the services; the Compose and platform acceptance tickets verify the full live journey.
+Documentation/scaffolding uses `python scripts/check_repository.py`; it does not prove application behavior. Service checks include Go unit tests, contract validation and UI fixture tests. Database integration tests use a disposable PostgreSQL instance and are skipped explicitly when `TEST_DATABASE_URL` is unset. Compose and platform acceptance tickets verify the full live journey; merged implementation does not substitute for that evidence.

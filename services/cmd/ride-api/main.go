@@ -46,7 +46,7 @@ func main() {
 	defer db.Close()
 	addr := env("HTTP_ADDR", ":8081")
 	api := &ride.API{Store: ride.NewStore(db), DB: db}
-	server := &http.Server{Addr: addr, Handler: telemetry.HTTPMiddleware("ride-api")(api.Handler()), ReadHeaderTimeout: 5 * time.Second}
+	server := newHTTPServer(addr, telemetry.HTTPMiddleware("ride-api")(api.Handler()), 10*time.Second, 10*time.Second)
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- server.ListenAndServe() }()
 	logger.Info("ride api listening", "addr", addr)
@@ -62,6 +62,17 @@ func main() {
 	defer cancelShutdown()
 	if err := server.Shutdown(shutdown); err != nil {
 		logger.Error("http shutdown failed", "error", err)
+	}
+}
+
+func newHTTPServer(addr string, handler http.Handler, readTimeout, writeTimeout time.Duration) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       60 * time.Second,
 	}
 }
 
