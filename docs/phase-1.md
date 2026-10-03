@@ -1,6 +1,6 @@
 # Phase 1: local mock application
 
-The [parent outcome](https://github.com/ANISHG-26/ottawa-fleet-app/issues/4) delivers a local UI/API/worker demonstration. First review [application foundation #3](https://github.com/ANISHG-26/ottawa-fleet-app/issues/3) and [platform foundation #1](https://github.com/ANISHG-26/ottawa-fleet-platform/issues/1). No implementation is marked complete.
+The [parent outcome](https://github.com/ANISHG-26/ottawa-fleet-app/issues/4) tracks a local UI/API/worker demonstration. Core implementation and Docker/Helm preparation have merged in application PRs #16–#19. Full Compose acceptance [#9](https://github.com/ANISHG-26/ottawa-fleet-app/issues/9) remains open pending evidence; platform measurement is separately tracked by [platform #12](https://github.com/ANISHG-26/ottawa-fleet-platform/issues/12).
 
 | Ticket | Delivery |
 |---|---|
@@ -16,10 +16,10 @@ The [parent outcome](https://github.com/ANISHG-26/ottawa-fleet-app/issues/4) del
 
 ## Sequence and acceptance
 
-Start with contract #1. Fleet/ride APIs then support worker and scenarios. UI can start from fixtures; CI checks accompany service implementation. Compose integrates the complete journey. Platform [acceptance #12](https://github.com/ANISHG-26/ottawa-fleet-platform/issues/12) verifies a fresh local start, workload settings, visible backlog, failure/recovery, no duplicate assignments and resource use.
+The contract, APIs, worker, scenarios, UI, service checks and Compose integration are implemented. Remaining acceptance evidence includes a fresh local start, workload settings, visible backlog, failure/recovery, no duplicate assignments and resource use. Platform [acceptance #12](https://github.com/ANISHG-26/ottawa-fleet-platform/issues/12) records that workload evidence.
 
 Done requires actual evidence and merged implementation. A scaffold check only proves docs are internally consistent. Each child issue has native blockers; unstarted work stays Todo with no review stage until ready.
 
 ## Following phases
 
-[Images #12](https://github.com/ANISHG-26/ottawa-fleet-app/issues/12) and [Helm #11](https://github.com/ANISHG-26/ottawa-fleet-app/issues/11) are P2 packaging work owned here. Platform consumes those artifacts for GitOps. Kubernetes/cloud access, KEDA, Istio, Backstage and AI are not Phase 1 dependencies.
+The first immutable image publication and chart package are available in [release v0.1.0](https://github.com/ANISHG-26/ottawa-fleet-app/releases/tag/v0.1.0), built by [trusted workflow run 37131621545](https://github.com/ANISHG-26/ottawa-fleet-app/actions/runs/37131621545). Verified Helm installation [#11](https://github.com/ANISHG-26/ottawa-fleet-app/issues/11), Compose acceptance [#9](https://github.com/ANISHG-26/ottawa-fleet-app/issues/9), and platform GCP and workload acceptance [#15](https://github.com/ANISHG-26/ottawa-fleet-platform/issues/15) and [#12](https://github.com/ANISHG-26/ottawa-fleet-platform/issues/12) remain pending. Platform consumes accepted artifacts for GitOps. Kubernetes/cloud access, KEDA, Istio, Backstage and AI are not Phase 1 dependencies.
