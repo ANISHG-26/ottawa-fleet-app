@@ -1,0 +1,47 @@
+{{- if .Values.migrations.enabled }}
+{{- $migrationKey := printf "%s|%s|%s|%s|%t|%s|%s" .Values.images.dbInit.sourceCommit .Values.images.dbInit.digest .Values.database.existingSecret .Values.database.secretKey .Values.database.disposable.enabled .Values.database.disposable.connectionSecret .Values.database.disposable.connectionSecretKey | sha256sum | trunc 12 }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ printf "db-init-%d-%s" .Release.Revision $migrationKey | trunc 63 | trimSuffix "-" }}
+  labels:
+    {{- include "ottawa-fleet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: db-init
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "db-init") | nindent 8 }}
+      annotations:
+        {{- include "ottawa-fleet.podAnnotations" (dict "root" . "image" .Values.images.dbInit) | nindent 8 }}
+    spec:
+      serviceAccountName: ottawa-fleet-app
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 10
+      {{- include "ottawa-fleet.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- toYaml .Values.global.securityContext | nindent 8 }}
+      containers:
+        - name: db-init
+          image: {{ include "ottawa-fleet.image" .Values.images.dbInit | quote }}
+          imagePullPolicy: IfNotPresent
+          env:
+            {{- include "ottawa-fleet.databaseEnv" . | nindent 12 }}
+            - name: BUILD_DIGEST
+              value: {{ .Values.images.dbInit.digest | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            {{- toYaml .Values.migrations.resources | nindent 12 }}
+{{- end }}

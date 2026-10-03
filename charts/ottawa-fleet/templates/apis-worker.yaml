@@ -1,0 +1,186 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fleet-api
+  labels:
+    {{- include "ottawa-fleet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fleet-api
+spec:
+  replicas: {{ .Values.fleetApi.replicas }}
+  selector:
+    matchLabels:
+      {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "fleet-api") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "fleet-api") | nindent 8 }}
+      annotations:
+        {{- include "ottawa-fleet.podAnnotations" (dict "root" . "image" .Values.images.fleetApi) | nindent 8 }}
+    spec:
+      serviceAccountName: ottawa-fleet-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 10
+      {{- include "ottawa-fleet.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- toYaml .Values.global.securityContext | nindent 8 }}
+      containers:
+        - name: fleet-api
+          image: {{ include "ottawa-fleet.image" .Values.images.fleetApi | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: {{ .Values.ports.fleetApi }}
+              protocol: TCP
+          env:
+            {{- include "ottawa-fleet.databaseEnv" . | nindent 12 }}
+            - name: HTTP_ADDR
+              value: {{ printf ":%v" .Values.ports.fleetApi | quote }}
+            - name: BUILD_DIGEST
+              value: {{ .Values.images.fleetApi.digest | quote }}
+            - name: FLEET_SYNTHETIC_OBSERVATIONS
+              value: {{ ternary "1" "0" .Values.fleetApi.syntheticObservations | quote }}
+            - name: FLEET_OBSERVATION_INTERVAL_SECONDS
+              value: {{ .Values.fleetApi.observationIntervalSeconds | quote }}
+            - name: FLEET_FAULT_CONTROL
+              value: {{ ternary "1" "0" .Values.fleetApi.faultControlEnabled | quote }}
+            - name: FLEET_FAULT_LATENCY_MS
+              value: {{ .Values.fleetApi.faultLatencyMS | quote }}
+            - name: FLEET_FAULT_ERROR_PERCENT
+              value: {{ .Values.fleetApi.faultErrorPercent | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.fleetApi.resources | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ride-api
+  labels:
+    {{- include "ottawa-fleet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ride-api
+spec:
+  replicas: {{ .Values.rideApi.replicas }}
+  selector:
+    matchLabels:
+      {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "ride-api") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "ride-api") | nindent 8 }}
+      annotations:
+        {{- include "ottawa-fleet.podAnnotations" (dict "root" . "image" .Values.images.rideApi) | nindent 8 }}
+    spec:
+      serviceAccountName: ottawa-fleet-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 10
+      {{- include "ottawa-fleet.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- toYaml .Values.global.securityContext | nindent 8 }}
+      containers:
+        - name: ride-api
+          image: {{ include "ottawa-fleet.image" .Values.images.rideApi | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: {{ .Values.ports.rideApi }}
+              protocol: TCP
+          env:
+            {{- include "ottawa-fleet.databaseEnv" . | nindent 12 }}
+            - name: HTTP_ADDR
+              value: {{ printf ":%v" .Values.ports.rideApi | quote }}
+            - name: BUILD_DIGEST
+              value: {{ .Values.images.rideApi.digest | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.rideApi.resources | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: assignment-worker
+  labels:
+    {{- include "ottawa-fleet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: assignment-worker
+spec:
+  {{- if not .Values.worker.autoscaling.enabled }}
+  replicas: {{ .Values.worker.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "assignment-worker") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "assignment-worker") | nindent 8 }}
+      annotations:
+        {{- include "ottawa-fleet.podAnnotations" (dict "root" . "image" .Values.images.worker) | nindent 8 }}
+    spec:
+      serviceAccountName: ottawa-fleet-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 10
+      {{- include "ottawa-fleet.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- toYaml .Values.global.securityContext | nindent 8 }}
+      containers:
+        - name: assignment-worker
+          image: {{ include "ottawa-fleet.image" .Values.images.worker | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: {{ .Values.ports.worker }}
+              protocol: TCP
+          env:
+            {{- include "ottawa-fleet.databaseEnv" . | nindent 12 }}
+            - name: FLEET_API_URL
+              value: {{ printf "http://fleet-api:%v" .Values.ports.fleetApi | quote }}
+            - name: HTTP_ADDR
+              value: {{ printf ":%v" .Values.ports.worker | quote }}
+            - name: BUILD_DIGEST
+              value: {{ .Values.images.worker.digest | quote }}
+            - name: PAUSE_AFTER_RESERVATION
+              value: {{ ternary "1" "0" .Values.worker.pauseAfterReservation | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}

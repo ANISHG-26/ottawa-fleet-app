@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleet-api
+  labels:
+    {{- include "ottawa-fleet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fleet-api
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "fleet-api") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.ports.fleetApi }}
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ride-api
+  labels:
+    {{- include "ottawa-fleet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ride-api
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "ride-api") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.ports.rideApi }}
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: assignment-worker
+  labels:
+    {{- include "ottawa-fleet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: assignment-worker
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "assignment-worker") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.ports.worker }}
+      targetPort: http
+      protocol: TCP

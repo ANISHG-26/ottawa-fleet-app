@@ -1,0 +1,106 @@
+{{- if .Values.database.disposable.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    {{- include "ottawa-fleet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: disposable-database
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "disposable-database") | nindent 4 }}
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  labels:
+    {{- include "ottawa-fleet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: disposable-database
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "disposable-database") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "disposable-database") | nindent 8 }}
+    spec:
+      serviceAccountName: ottawa-fleet-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: {{ printf "%s@%s" .Values.database.disposable.imageRepository .Values.database.disposable.imageDigest | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgres
+              containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.database.disposable.databaseName | quote }}
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.disposable.credentialsSecret | quote }}
+                  key: {{ .Values.database.disposable.usernameKey | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.disposable.credentialsSecret | quote }}
+                  key: {{ .Values.database.disposable.passwordKey | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          resources:
+            {{- toYaml .Values.database.disposable.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- if .Values.database.disposable.storageClassName }}
+        storageClassName: {{ .Values.database.disposable.storageClassName | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.database.disposable.storage | quote }}
+{{- end }}

@@ -1,0 +1,152 @@
+name: Chart and release checks
+
+on:
+  pull_request:
+    paths:
+      - "charts/**"
+      - "deploy/Dockerfile*"
+      - ".dockerignore"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/chart-checks.yml"
+  push:
+    branches: [main]
+    paths:
+      - "charts/**"
+      - "deploy/Dockerfile*"
+      - ".dockerignore"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/chart-checks.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chart-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.3.0
+
+      - name: Install pinned YAML parser
+        run: python -m pip install --disable-pip-version-check PyYAML==6.0.2
+
+      - name: Lint, render, package, and check rendered release contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          chart=charts/ottawa-fleet
+          helm lint "$chart" -f "$chart/ci-values.yaml"
+
+          # Default values intentionally omit image digests. A chart render must
+          # reject them so an unpinned workload cannot pass release validation.
+          if helm template ottawa-fleet "$chart" --namespace release-check > "$RUNNER_TEMP/default-render.yaml" 2> "$RUNNER_TEMP/default-render.err"; then
+            echo "Chart unexpectedly rendered without image digests" >&2
+            exit 1
+          fi
+          python - "$RUNNER_TEMP/default-render.err" <<'PY'
+          import pathlib
+          import sys
+
+          error = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+          assert "/images/dbInit/digest" in error and "'' does not match pattern" in error, error
+          PY
+
+          helm template ottawa-fleet "$chart" --namespace release-check \
+            -f "$chart/ci-values.yaml" > "$RUNNER_TEMP/default-render.yaml"
+          helm template ottawa-fleet "$chart" --namespace release-check \
+            -f "$chart/ci-values.yaml" --set worker.autoscaling.enabled=true \
+            > "$RUNNER_TEMP/autoscaled-render.yaml"
+          helm template ottawa-fleet "$chart" --namespace release-check \
+            -f "$chart/ci-values.yaml" \
+            --set-string images.dbInit.sourceCommit=2222222222222222222222222222222222222222 \
+            > "$RUNNER_TEMP/changed-migration-render.yaml"
+          helm template ottawa-fleet "$chart" --namespace release-check \
+            -f "$chart/ci-values.yaml" --set-string database.disposable.imageDigest= \
+            > "$RUNNER_TEMP/external-database-render.yaml"
+          helm template ottawa-fleet "$chart" --namespace release-check \
+            -f "$chart/ci-values.yaml" --set database.disposable.enabled=true \
+            > "$RUNNER_TEMP/disposable-database-render.yaml"
+          if helm template ottawa-fleet "$chart" --namespace release-check \
+            -f "$chart/ci-values.yaml" --set database.disposable.enabled=true \
+            --set-string database.disposable.imageDigest= \
+            > "$RUNNER_TEMP/invalid-disposable-render.yaml" \
+            2> "$RUNNER_TEMP/invalid-disposable-render.err"; then
+            echo "Disposable database unexpectedly rendered without an image digest" >&2
+            exit 1
+          fi
+          python - "$RUNNER_TEMP/invalid-disposable-render.err" <<'PY'
+          import pathlib
+          import sys
+
+          error = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+          assert "/database/disposable/imageDigest" in error and "does not match pattern" in error, error
+          PY
+
+          helm package "$chart" --destination "$RUNNER_TEMP"
+          helm show chart "$RUNNER_TEMP/ottawa-fleet-0.1.0.tgz" >/dev/null
+
+          python - "$RUNNER_TEMP" <<'PY'
+          import pathlib
+          import sys
+          import yaml
+
+          output = pathlib.Path(sys.argv[1])
+
+          def documents(name):
+              return [doc for doc in yaml.safe_load_all((output / name).read_text(encoding="utf-8")) if doc]
+
+          def find(docs, kind, name):
+              matches = [doc for doc in docs if doc.get("kind") == kind and doc.get("metadata", {}).get("name", "").startswith(name)]
+              assert len(matches) == 1, f"expected one {kind} named {name}, found {len(matches)}"
+              return matches[0]
+
+          normal = documents("default-render.yaml")
+          autoscaled = documents("autoscaled-render.yaml")
+          changed = documents("changed-migration-render.yaml")
+          external_database = documents("external-database-render.yaml")
+          disposable_database = documents("disposable-database-render.yaml")
+
+          worker = find(normal, "Deployment", "assignment-worker")
+          env = worker["spec"]["template"]["spec"]["containers"][0]["env"]
+          fleet_url = next(item["value"] for item in env if item["name"] == "FLEET_API_URL")
+          assert fleet_url == "http://fleet-api:8080", fleet_url
+
+          autoscaled_worker = find(autoscaled, "Deployment", "assignment-worker")
+          assert "replicas" not in autoscaled_worker["spec"], autoscaled_worker["spec"]
+
+          migration = find(normal, "Job", "db-init-")
+          annotations = migration["metadata"].get("annotations", {})
+          assert annotations.get("argocd.argoproj.io/hook") == "Sync", annotations
+          assert annotations.get("argocd.argoproj.io/sync-wave") == "-1", annotations
+          helm_hook_values = [value for key, value in annotations.items() if key.startswith("helm.sh/hook")]
+          assert not helm_hook_values, helm_hook_values
+
+          changed_migration = find(changed, "Job", "db-init-")
+          assert migration["metadata"]["name"] != changed_migration["metadata"]["name"], (
+              migration["metadata"]["name"], changed_migration["metadata"]["name"]
+          )
+          assert not any(doc.get("kind") == "StatefulSet" for doc in external_database)
+          find(disposable_database, "StatefulSet", "postgres")
+          print("Rendered chart contracts passed")
+          PY
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Check Dockerfile syntax and build configuration
+        run: |
+          docker buildx build --check --file deploy/Dockerfile.go \
+            --build-arg APP_CMD=fleet-api --build-arg BUILD_SERVICE=fleet-api .
+          docker buildx build --check --file deploy/Dockerfile.web .
