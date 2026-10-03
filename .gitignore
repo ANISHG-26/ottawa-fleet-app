@@ -33,3 +33,8 @@ Thumbs.db
 *.test
 *.out
 .local-data/
+deploy/.local-data/
+
+# Workspace-local Go caches
+.gocache/
+.gomodcache/
