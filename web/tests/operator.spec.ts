@@ -280,3 +280,20 @@ test('accepting a different run replaces its trip and vehicle snapshot', async (
   await expect(page.getByText(/old-start/)).toHaveCount(0);
 });
 
+test('mobile layout contains long server ride and trip identifiers', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route('https://tile.openstreetmap.org/**', route => route.abort());
+  await page.route('**/fleet-api/**', route => route.fulfill({ json: { items: [{ vehicle_id: 'vehicle_01J8Y2R4M7T9V3X5Z6A8B0C2D4E6F8G0' }], next_cursor: null, as_of: new Date().toISOString() } }));
+  await page.route('**/ride-api/v1/rides**', route => route.fulfill({ json: { items: [{ ride_id: 'ride_01J8Y2R4M7T9V3X5Z6A8B0C2D4E6F8G0H2J4K6M8N0P2R4T6V8X0Z2A4C6E8G0', pickup_zone: 'lansdowne', dropoff_zone: 'centretown', passengers: 1, state: 'completed', vehicle_id: 'vehicle_01J8Y2R4M7T9V3X5Z6A8B0C2D4E6F8G0', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }], next_cursor: null, as_of: new Date().toISOString() } }));
+  await page.route('**/ride-api/v2/rides/*/trip', route => route.fulfill({ json: { ride_id: 'ride_01J8Y2R4M7T9V3X5Z6A8B0C2D4E6F8G0H2J4K6M8N0P2R4T6V8X0Z2A4C6E8G0', assignment_state: 'completed', trip_state: 'completed', trip_id: 'trip_01J8Y2R4M7T9V3X5Z6A8B0C2D4E6F8G0H2J4K6M8N0P2R4T6V8X0Z2A4C6E8G0', vehicle_id: 'vehicle_01J8Y2R4M7T9V3X5Z6A8B0C2D4E6F8G0', updated_at: new Date().toISOString(), version: 1 } }));
+  await page.addInitScript(() => localStorage.setItem('ottawa-fleet.simulation-run-id', 'run-mobile'));
+  const now = new Date().toISOString();
+  await page.route('**/simulation-api/v2/simulation/runs/run-mobile', route => route.fulfill({ json: { run_id: 'run-mobile', state: 'completed', manifest: {}, created_at: now, deadline_at: now, completed_at: now, terminal_reason: 'all_events_complete', incomplete_trips: 0, incomplete_requests: 0, incomplete_events: 0, issued_events: 1, completed_events: 1, version: 1 } }));
+  await page.route('**/simulation-api/v2/simulation/runs/run-mobile/events**', route => route.fulfill({ json: { items: [{ event_id: 'event-mobile', sequence: 1, kind: 'trip_start', result: 'applied', scheduled_at: now, ride_id: 'ride_01J8Y2R4M7T9V3X5Z6A8B0C2D4E6F8G0H2J4K6M8N0P2R4T6V8X0Z2A4C6E8G0', trip_id: 'trip_01J8Y2R4M7T9V3X5Z6A8B0C2D4E6F8G0H2J4K6M8N0P2R4T6V8X0Z2A4C6E8G0', vehicle_id: 'vehicle_01J8Y2R4M7T9V3X5Z6A8B0C2D4E6F8G0' }], next_cursor: null } }));
+  await page.route('**/simulation-api/v2/simulation/routes/**', route => route.fulfill({ json: { route_id: 'lansdowne-centretown-v1', route_version: 1, start_zone: 'lansdowne', end_zone: 'centretown', duration_seconds: 8, points: [{ latitude: 45.3995, longitude: -75.6823 }, { latitude: 45.4148, longitude: -75.6984 }] } }));
+  await page.route('**/fleet-api/v2/fleet/vehicles/*/position', route => route.fulfill({ json: { vehicle_id: 'vehicle_01J8Y2R4M7T9V3X5Z6A8B0C2D4E6F8G0', position: { latitude: 45.3995, longitude: -75.6823 }, observed_at: now, as_of: now, freshness: 'fresh', operational_state: 'available', vehicle_version: 1 } }));
+  await page.goto('/');
+  await expect(page.locator('.sim-trip-card')).toContainText('trip_01J8Y2R4M7T9V3X5Z6A8B0C2D4E6F8G0H2J4K6M8N0P2R4T6V8X0Z2A4C6E8G0');
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
