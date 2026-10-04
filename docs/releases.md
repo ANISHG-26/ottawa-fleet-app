@@ -8,7 +8,28 @@ The `Trusted application release` workflow runs only for pushed `v*.*.*` tags. C
 
 It builds one `linux/amd64` image for each Go command (`db-init`, `fleet-api`, `ride-api`, `assignment-worker`, `scenario-runner`) and one UI image. The workflow publishes version and source-SHA tags for discovery, OCI source/revision/service/version labels, and records the registry-returned immutable digest, full source commit, and architecture in one JSON artifact per image. Deployment values must use `repository@sha256:…`; tags are never deployment pins. Go API and worker binaries expose `/buildinfo` with service, source commit, architecture, and the configured image digest. The image digest is supplied at runtime because the registry assigns it after the image is built. OCI labels and release metadata identify the UI image.
 
-The workflow also uploads the versioned `.tgz` chart as an artifact. It does not publish the chart to a registry or create a platform PR. The trusted tag/release administrator must ensure the tag points to an approved commit and cannot be moved under repository tag protections.
+The workflow also uploads the versioned `.tgz` chart as an artifact. It does not publish the chart to a registry, create a GitHub Release record or create a platform PR. The trusted tag/release administrator must ensure the tag points to an approved commit and cannot be moved under repository tag protections.
+
+## Published build and current source
+
+As of October 3, 2026, the published build is selected by
+[tag v0.1.0](https://github.com/ANISHG-26/ottawa-fleet-app/tree/v0.1.0) at source
+`f485682ea78c19e17f4194b642f8522e16e77194`.
+[Trusted workflow run 37131621545](https://github.com/ANISHG-26/ottawa-fleet-app/actions/runs/37131621545)
+succeeded, publishing six `linux/amd64` GHCR images and packaging chart `0.1.0`
+as the `ottawa-fleet-helm-chart` Actions artifact. Image identity artifacts are
+attached to that same run. There is no GitHub Release page for this tag; use
+the tag for reviewed source and the workflow for build results/artifacts.
+
+Current `main` has chart source `0.1.1`, including the disposable PostgreSQL
+mount-directory fix from [PR #23](https://github.com/ANISHG-26/ottawa-fleet-app/pull/23),
+and the bounded Ride API handling from
+[PR #21](https://github.com/ANISHG-26/ottawa-fleet-app/pull/21). These later changes
+do not alter the published v0.1.0 image/chart set. Publish a new reviewed tagged
+build before promoting an artifact set that claims the newer source. Chart
+source version, image digests and source commits must stay aligned with the
+actual build metadata; merged source alone does not prove installed-chart,
+Compose or platform lifecycle acceptance.
 
 ## Applying a release
 
