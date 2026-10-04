@@ -103,6 +103,13 @@ route profile must be ready before a run is accepted. If readiness reports
 `profile_not_ready`, preserve that project's data and start a new isolated
 project name with a fresh volume rather than resetting the existing one.
 
+The standard project keeps its six-vehicle v1 seed. The opt-in simulation
+profile provides the 20-vehicle `route20synthetic` fixture in a separate,
+fresh project. Fleet, Ride, and simulation database migrations are additive and
+retain existing v1 tables and records. An existing default-six project volume
+is not converted into the simulation profile. Use a dedicated project name and
+fresh volume for simulation acceptance.
+
 In the UI, enable the opt-in checkbox, keep the request count, event rate,
 duration and concurrency within the displayed bounds, then start the pinned
 Lansdowne-to-Centretown scenario. The controller owns run scheduling and trip
@@ -135,6 +142,28 @@ docker compose --project-directory . -p $env:SIMULATION_PROJECT_NAME -f deploy/c
 
 The project-specific volume is retained for later inspection or restart. Do not
 add `--volumes` when stopping a run.
+
+## Public API simulation journey
+
+With the dedicated simulation Compose project running and ready, run the
+bounded public-API journey from the repository root:
+
+```powershell
+python tests/simulation_journey.py
+```
+
+The journey checks the route and 20-vehicle fixture, exact-manifest replay,
+conflicting and concurrent run rejection, moving server-reported positions,
+normal trip completion, location-aware v1 reservation reuse, and Stop with
+drain. It uses the default loopback ports shown above. It creates run and ride
+records in the project's persistent database, so use a fresh project name and
+volume when you need a clean run. The script does not reset data. Inspect the
+run state and event history through the controller API before stopping the
+project.
+
+This API journey does not replace browser operator acceptance. Use the manual
+checks in [simulation acceptance](simulation-acceptance.md) for refresh,
+controller restart, stale positions, and unavailable map tiles.
 
 ## Validation and local data reset
 
