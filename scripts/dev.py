@@ -86,6 +86,8 @@ def command_check(_: argparse.Namespace) -> None:
         print("PostgreSQL integration tests skipped: TEST_DATABASE_URL is unset.")
     subprocess.run([sys.executable, "scripts/build_contracts.py", "--check"], cwd=ROOT, check=True)
     subprocess.run([sys.executable, "scripts/check_contracts.py"], cwd=ROOT, check=True)
+    subprocess.run([sys.executable, "scripts/check_simulation_contracts.py", "--check-generated"], cwd=ROOT, check=True)
+    subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-p", "test_simulation_contracts.py"], cwd=ROOT, check=True)
     subprocess.run([sys.executable, "scripts/check_repository.py"], cwd=ROOT, check=True)
     npm = shutil.which("npm")
     if not npm:

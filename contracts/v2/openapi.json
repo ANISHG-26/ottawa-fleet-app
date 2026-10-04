@@ -1,0 +1,2006 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ottawa Fleet Simulation Contracts",
+    "version": "2.0.0",
+    "description": "Additive synthetic simulation APIs. Normative semantics: README.md; v1 remains immutable."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8083"
+    }
+  ],
+  "paths": {
+    "/v2/simulation/runs": {
+      "post": {
+        "operationId": "createSimulationRun",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRunRequest"
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "servers": [
+          {
+            "url": "http://localhost:8083"
+          }
+        ]
+      },
+      "get": {
+        "operationId": "listSimulationRuns",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "servers": [
+          {
+            "url": "http://localhost:8083"
+          }
+        ]
+      }
+    },
+    "/v2/simulation/runs/{run_id}": {
+      "get": {
+        "operationId": "getSimulationRun",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,63}$"
+            }
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://localhost:8083"
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "stopSimulationRun",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StopRunRequest"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,63}$"
+            }
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://localhost:8083"
+          }
+        ]
+      }
+    },
+    "/v2/simulation/runs/{run_id}/events": {
+      "get": {
+        "operationId": "listSimulationEvents",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,63}$"
+            }
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://localhost:8083"
+          }
+        ]
+      }
+    },
+    "/v2/rides/{ride_id}/trip": {
+      "get": {
+        "operationId": "getTrip",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Trip"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ride_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,63}$"
+            }
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://localhost:8081"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "startTrip",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Trip"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripCommand"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ride_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,63}$"
+            }
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://localhost:8081"
+          }
+        ]
+      }
+    },
+    "/v2/rides/{ride_id}/trip/completion": {
+      "post": {
+        "operationId": "completeTrip",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Trip"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripCommand"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ride_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,63}$"
+            }
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://localhost:8081"
+          }
+        ]
+      }
+    },
+    "/v2/fleet/events/{event_id}": {
+      "get": {
+        "operationId": "getFleetEffectReceipt",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FleetEffectReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,63}$"
+            }
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://localhost:8080"
+          }
+        ]
+      }
+    },
+    "/v2/fleet/vehicles/{vehicle_id}/trips/start": {
+      "post": {
+        "operationId": "startFleetTrip",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FleetEffectReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FleetStartTripCommand"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "vehicle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,63}$"
+            }
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://localhost:8080"
+          }
+        ]
+      }
+    },
+    "/v2/fleet/vehicles/{vehicle_id}/trips/completion": {
+      "post": {
+        "operationId": "completeFleetTrip",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FleetEffectReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FleetCompleteTripCommand"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "vehicle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,63}$"
+            }
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://localhost:8080"
+          }
+        ]
+      }
+    },
+    "/v2/fleet/vehicles/{vehicle_id}/position": {
+      "get": {
+        "operationId": "getVehiclePosition",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Position"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "vehicle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,63}$"
+            }
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://localhost:8080"
+          }
+        ]
+      },
+      "put": {
+        "operationId": "observeVehiclePosition",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Position"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PositionCommand"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "vehicle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,63}$"
+            }
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://localhost:8080"
+          }
+        ]
+      }
+    },
+    "/v2/simulation/routes/{route_id}": {
+      "get": {
+        "operationId": "getSimulationRoute",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Route"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "route_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,63}$"
+            }
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://localhost:8083"
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AssignmentState": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "processing",
+          "completed",
+          "failed"
+        ]
+      },
+      "TripState": {
+        "type": "string",
+        "enum": [
+          "not_started",
+          "in_progress",
+          "completed",
+          "cancelled"
+        ]
+      },
+      "RunState": {
+        "type": "string",
+        "enum": [
+          "scheduled",
+          "running",
+          "stopping",
+          "completed",
+          "stopped",
+          "failed"
+        ]
+      },
+      "VehicleOperationalState": {
+        "type": "string",
+        "enum": [
+          "available",
+          "reserved",
+          "on_trip",
+          "out_of_service"
+        ]
+      },
+      "Position": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "vehicle_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "position": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "latitude": {
+                "type": "number",
+                "minimum": 45.0,
+                "maximum": 46.0
+              },
+              "longitude": {
+                "type": "number",
+                "minimum": -76.0,
+                "maximum": -75.0
+              }
+            },
+            "required": [
+              "latitude",
+              "longitude"
+            ]
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "freshness": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "stale",
+              "future"
+            ]
+          },
+          "operational_state": {
+            "type": "string",
+            "enum": [
+              "available",
+              "reserved",
+              "on_trip",
+              "out_of_service"
+            ]
+          },
+          "vehicle_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "route_id": {
+            "const": "lansdowne-centretown-v1"
+          },
+          "route_version": {
+            "const": 1
+          },
+          "route_segment": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 19
+          },
+          "segment_start": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "latitude": {
+                "type": "number",
+                "minimum": 45.0,
+                "maximum": 46.0
+              },
+              "longitude": {
+                "type": "number",
+                "minimum": -76.0,
+                "maximum": -75.0
+              }
+            },
+            "required": [
+              "latitude",
+              "longitude"
+            ]
+          },
+          "segment_end": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "latitude": {
+                "type": "number",
+                "minimum": 45.0,
+                "maximum": 46.0
+              },
+              "longitude": {
+                "type": "number",
+                "minimum": -76.0,
+                "maximum": -75.0
+              }
+            },
+            "required": [
+              "latitude",
+              "longitude"
+            ]
+          },
+          "segment_started_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "segment_ends_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "vehicle_id",
+          "position",
+          "observed_at",
+          "as_of",
+          "freshness",
+          "operational_state",
+          "vehicle_version"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "operational_state": {
+                  "const": "on_trip"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "route_id",
+                "route_version",
+                "route_segment",
+                "segment_start",
+                "segment_end",
+                "segment_started_at",
+                "segment_ends_at"
+              ]
+            }
+          }
+        ]
+      },
+      "RunManifest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scenario_id": {
+            "type": "string",
+            "enum": [
+              "route20synthetic"
+            ]
+          },
+          "fleet_profile": {
+            "type": "string",
+            "enum": [
+              "default-six",
+              "route20synthetic"
+            ]
+          },
+          "idempotency_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{8,128}$"
+          },
+          "event_rate_per_second": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "request_count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "execution_event_count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
+          },
+          "duration_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
+          },
+          "max_in_flight": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "route_duration_seconds": {
+            "const": 8
+          },
+          "route_id": {
+            "const": "lansdowne-centretown-v1"
+          },
+          "start_zone": {
+            "const": "lansdowne"
+          },
+          "end_zone": {
+            "const": "centretown"
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "scenario_id",
+          "fleet_profile",
+          "idempotency_key",
+          "event_rate_per_second",
+          "request_count",
+          "execution_event_count",
+          "duration_seconds",
+          "max_in_flight",
+          "route_duration_seconds",
+          "route_id",
+          "start_zone",
+          "end_zone",
+          "seed"
+        ]
+      },
+      "Run": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "running",
+              "stopping",
+              "completed",
+              "stopped",
+              "failed"
+            ]
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/RunManifest"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "deadline_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "stop_requested_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "drain_deadline_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "terminal_reason": {
+            "type": "string",
+            "enum": [
+              "requested_stop",
+              "deadline",
+              "all_events_complete",
+              "execution_failure"
+            ]
+          },
+          "incomplete_trips": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20
+          },
+          "incomplete_requests": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20
+          },
+          "incomplete_events": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 60
+          },
+          "issued_events": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 60
+          },
+          "completed_events": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 60
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "run_id",
+          "state",
+          "manifest",
+          "created_at",
+          "deadline_at",
+          "drain_deadline_at",
+          "issued_events",
+          "completed_events",
+          "incomplete_trips",
+          "incomplete_requests",
+          "incomplete_events",
+          "version"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "completed",
+                    "stopped",
+                    "failed"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "completed_at",
+                "terminal_reason"
+              ]
+            }
+          }
+        ]
+      },
+      "Trip": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ride_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "assignment_state": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "processing",
+              "completed",
+              "failed"
+            ]
+          },
+          "trip_state": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "in_progress",
+              "completed",
+              "cancelled"
+            ]
+          },
+          "trip_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "vehicle_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "start_zone": {
+            "type": "string",
+            "enum": [
+              "centretown",
+              "glebe",
+              "lansdowne",
+              "byward-market"
+            ]
+          },
+          "destination_zone": {
+            "type": "string",
+            "enum": [
+              "centretown",
+              "glebe",
+              "lansdowne",
+              "byward-market"
+            ]
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "ride_id",
+          "assignment_state",
+          "trip_state",
+          "updated_at",
+          "version"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "trip_state": {
+                  "const": "in_progress"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "trip_id",
+                "vehicle_id",
+                "started_at"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "trip_state": {
+                  "const": "completed"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "trip_id",
+                "vehicle_id",
+                "started_at",
+                "completed_at"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "trip_state": {
+                  "const": "completed"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "assignment_state": {
+                  "const": "completed"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "SimulationEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "run_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "trip_start",
+              "position_observation",
+              "trip_complete"
+            ]
+          },
+          "ride_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "trip_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "vehicle_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "expected_trip_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expected_vehicle_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "scheduled_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "applied",
+              "replayed",
+              "rejected",
+              "failed"
+            ]
+          }
+        },
+        "required": [
+          "event_id",
+          "run_id",
+          "sequence",
+          "kind",
+          "scheduled_at",
+          "result"
+        ]
+      },
+      "CreateRunRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "manifest": {
+            "$ref": "#/components/schemas/RunManifest"
+          }
+        },
+        "required": [
+          "manifest"
+        ]
+      },
+      "StopRunRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "drain": {
+            "const": true
+          }
+        },
+        "required": [
+          "drain"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "invalid_request",
+              "idempotency_conflict",
+              "not_found",
+              "run_active",
+              "profile_not_ready",
+              "version_conflict",
+              "temporarily_unavailable"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "request_id"
+        ]
+      },
+      "FleetEffectReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "effect": {
+            "type": "string",
+            "enum": [
+              "trip_start",
+              "trip_complete"
+            ]
+          },
+          "run_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "ride_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "trip_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "vehicle_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "reservation_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "payload_fingerprint": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "accepted_vehicle_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "stored_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "applied",
+              "replayed"
+            ]
+          }
+        },
+        "required": [
+          "event_id",
+          "effect",
+          "run_id",
+          "ride_id",
+          "trip_id",
+          "vehicle_id",
+          "reservation_id",
+          "payload_fingerprint",
+          "accepted_vehicle_version",
+          "stored_at",
+          "result"
+        ]
+      },
+      "Route": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "route_id": {
+            "const": "lansdowne-centretown-v1"
+          },
+          "route_version": {
+            "const": 1
+          },
+          "start_zone": {
+            "const": "lansdowne"
+          },
+          "end_zone": {
+            "const": "centretown"
+          },
+          "duration_seconds": {
+            "const": 8
+          },
+          "points": {
+            "type": "array",
+            "minItems": 21,
+            "maxItems": 21,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "latitude": {
+                  "type": "number",
+                  "minimum": 45.0,
+                  "maximum": 46.0
+                },
+                "longitude": {
+                  "type": "number",
+                  "minimum": -76.0,
+                  "maximum": -75.0
+                }
+              },
+              "required": [
+                "latitude",
+                "longitude"
+              ]
+            }
+          }
+        },
+        "required": [
+          "route_id",
+          "route_version",
+          "start_zone",
+          "end_zone",
+          "duration_seconds",
+          "points"
+        ]
+      },
+      "TripCommand": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "trip_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "vehicle_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "reservation_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "run_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "route_id": {
+            "const": "lansdowne-centretown-v1"
+          },
+          "expected_trip_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expected_vehicle_version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "event_id",
+          "trip_id",
+          "vehicle_id",
+          "reservation_id",
+          "run_id",
+          "route_id",
+          "expected_trip_version",
+          "expected_vehicle_version"
+        ]
+      },
+      "FleetStartTripCommand": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "run_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "ride_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "trip_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "vehicle_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "reservation_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "route_id": {
+            "const": "lansdowne-centretown-v1"
+          },
+          "expected_vehicle_version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "event_id",
+          "run_id",
+          "ride_id",
+          "trip_id",
+          "vehicle_id",
+          "reservation_id",
+          "route_id",
+          "expected_vehicle_version"
+        ]
+      },
+      "FleetCompleteTripCommand": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "run_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "ride_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "trip_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "vehicle_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "reservation_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "route_id": {
+            "const": "lansdowne-centretown-v1"
+          },
+          "expected_vehicle_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "destination_zone": {
+            "type": "string",
+            "enum": [
+              "centretown",
+              "glebe",
+              "lansdowne",
+              "byward-market"
+            ]
+          },
+          "destination_position": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "latitude": {
+                "type": "number",
+                "minimum": 45.0,
+                "maximum": 46.0
+              },
+              "longitude": {
+                "type": "number",
+                "minimum": -76.0,
+                "maximum": -75.0
+              }
+            },
+            "required": [
+              "latitude",
+              "longitude"
+            ]
+          }
+        },
+        "required": [
+          "event_id",
+          "run_id",
+          "ride_id",
+          "trip_id",
+          "vehicle_id",
+          "reservation_id",
+          "route_id",
+          "expected_vehicle_version",
+          "destination_zone",
+          "destination_position"
+        ]
+      },
+      "PositionCommand": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "run_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "trip_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "route_id": {
+            "const": "lansdowne-centretown-v1"
+          },
+          "expected_vehicle_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "position": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "latitude": {
+                "type": "number",
+                "minimum": 45.0,
+                "maximum": 46.0
+              },
+              "longitude": {
+                "type": "number",
+                "minimum": -76.0,
+                "maximum": -75.0
+              }
+            },
+            "required": [
+              "latitude",
+              "longitude"
+            ]
+          },
+          "route_segment": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 19
+          }
+        },
+        "required": [
+          "event_id",
+          "run_id",
+          "trip_id",
+          "route_id",
+          "expected_vehicle_version",
+          "position",
+          "route_segment"
+        ]
+      },
+      "RunPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/Run"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ]
+      },
+      "EventPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/SimulationEvent"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ]
+      }
+    }
+  }
+}

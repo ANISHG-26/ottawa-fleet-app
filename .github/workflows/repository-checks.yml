@@ -28,3 +28,5 @@ jobs:
         run: |
           python scripts/build_contracts.py --check
           python scripts/check_contracts.py
+          python scripts/check_simulation_contracts.py --check-generated
+          python -m unittest discover -s tests -p test_simulation_contracts.py
