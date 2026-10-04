@@ -196,17 +196,41 @@ func (h *Handler) advance(ctx context.Context) error {
 				continue
 			}
 			if ride.State == "failed" {
-				_, _ = h.db.ExecContext(ctx, `UPDATE simulation_requests SET assignment_state='failed',trip_state='cancelled' WHERE run_id=$1 AND sequence=$2`, runID, x.seq)
-				_, _ = h.db.ExecContext(ctx, `UPDATE simulation_events SET result='failed' WHERE run_id=$1 AND request_sequence=$2 AND result='pending'`, runID, x.seq)
+				tx, txErr := h.db.BeginTx(ctx, nil)
+				if txErr != nil {
+					return txErr
+				}
+				if _, txErr = tx.ExecContext(ctx, `UPDATE simulation_requests SET assignment_state='failed',trip_state='cancelled' WHERE run_id=$1 AND sequence=$2`, runID, x.seq); txErr == nil {
+					_, txErr = tx.ExecContext(ctx, `UPDATE simulation_events SET result='failed' WHERE run_id=$1 AND request_sequence=$2 AND result='pending'`, runID, x.seq)
+				}
+				if txErr == nil {
+					txErr = tx.Commit()
+				} else {
+					_ = tx.Rollback()
+				}
+				if txErr != nil {
+					return txErr
+				}
 				continue
 			}
 			if ride.State != "completed" || ride.VehicleID == nil {
 				continue
 			}
 			x.vehicle = *ride.VehicleID
-			_, err = h.db.ExecContext(ctx, `UPDATE simulation_requests SET assignment_state='assigned',vehicle_id=$3 WHERE run_id=$1 AND sequence=$2`, runID, x.seq, x.vehicle)
-			if err != nil {
-				return err
+			tx, txErr := h.db.BeginTx(ctx, nil)
+			if txErr != nil {
+				return txErr
+			}
+			if _, txErr = tx.ExecContext(ctx, `UPDATE simulation_requests SET assignment_state='assigned',vehicle_id=$3 WHERE run_id=$1 AND sequence=$2`, runID, x.seq, x.vehicle); txErr == nil {
+				_, txErr = tx.ExecContext(ctx, `UPDATE simulation_events SET ride_id=$3,vehicle_id=$4 WHERE run_id=$1 AND request_sequence=$2`, runID, x.seq, x.ride, x.vehicle)
+			}
+			if txErr == nil {
+				txErr = tx.Commit()
+			} else {
+				_ = tx.Rollback()
+			}
+			if txErr != nil {
+				return txErr
 			}
 			x.assignment = "assigned"
 		}
@@ -282,8 +306,21 @@ func (h *Handler) submitRide(ctx context.Context, runID string, x workerRequest)
 	if !idPattern.MatchString(result.RideID) {
 		return errors.New("Ride returned invalid identity")
 	}
-	_, err = h.db.ExecContext(ctx, `UPDATE simulation_requests SET ride_id=$3,assignment_state='accepted' WHERE run_id=$1 AND sequence=$2 AND submitted_at IS NOT NULL`, runID, x.seq, result.RideID)
-	return err
+	// Persist the owner identity across the request and its pre-created events
+	// together. Events can become terminal before a trip payload is issued, but
+	// they still belong to this accepted Ride.
+	tx, err = h.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `UPDATE simulation_requests SET ride_id=$3,assignment_state='accepted' WHERE run_id=$1 AND sequence=$2 AND submitted_at IS NOT NULL`, runID, x.seq, result.RideID); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE simulation_events SET ride_id=$3 WHERE run_id=$1 AND request_sequence=$2`, runID, x.seq, result.RideID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 func (h *Handler) rateLimited(ctx context.Context, runID string, rate int, now time.Time) bool {
 	var n int
