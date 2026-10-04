@@ -13,6 +13,14 @@ import (
 	"time"
 )
 
+type workerRequest struct {
+	seq                            int
+	ride, key, trip                string
+	scheduled                      time.Time
+	assignment, tripState, vehicle string
+	submittedAt                    sql.NullTime
+}
+
 // RunWorker is restart-safe and only one process can dispatch at a time.
 func (h *Handler) RunWorker(ctx context.Context) error {
 	if !h.config.Enabled {
@@ -56,7 +64,11 @@ func (h *Handler) RunWorker(ctx context.Context) error {
 }
 
 func (h *Handler) advance(ctx context.Context) error {
-	rows, err := h.db.QueryContext(ctx, `SELECT run_id,state,manifest,deadline_at,COALESCE(stop_requested_at,created_at),drain_deadline_at,COALESCE(terminal_reason,'') FROM simulation_runs WHERE state IN ('scheduled','running','stopping') ORDER BY created_at LIMIT 1`)
+	preferTerminal := h.dispatchTurn.Add(1)%2 == 1
+	h.terminalMu.Lock()
+	terminalAfter := h.terminalAfter
+	h.terminalMu.Unlock()
+	rows, err := h.db.QueryContext(ctx, `SELECT r.run_id,r.state,r.manifest,r.deadline_at,COALESCE(r.stop_requested_at,r.created_at),r.drain_deadline_at,COALESCE(r.terminal_reason,'') FROM simulation_runs r WHERE r.state IN ('scheduled','running','stopping') OR (r.state='stopped' AND ($1 OR NOT EXISTS (SELECT 1 FROM simulation_runs active WHERE active.state IN ('scheduled','running','stopping'))) AND (EXISTS (SELECT 1 FROM simulation_events e WHERE e.run_id=r.run_id AND e.result='pending' AND e.issued_at IS NOT NULL AND e.payload IS NOT NULL) OR EXISTS (SELECT 1 FROM simulation_requests q WHERE q.run_id=r.run_id AND q.submitted_at IS NOT NULL AND q.ride_id IS NULL AND q.assignment_state IN ('pending','unfinished')) OR EXISTS (SELECT 1 FROM simulation_events e JOIN simulation_requests q ON q.run_id=e.run_id AND q.sequence=e.request_sequence WHERE e.run_id=r.run_id AND e.kind='trip_complete' AND e.result='pending' AND e.payload IS NULL AND q.trip_state IN ('in_progress','unfinished') AND e.scheduled_at<=$3))) ORDER BY CASE WHEN r.state='stopped' THEN 0 ELSE 1 END,CASE WHEN r.state='stopped' AND r.run_id>$2 THEN 0 WHEN r.state='stopped' THEN 1 ELSE 0 END,r.run_id LIMIT 1`, preferTerminal, terminalAfter, h.clock().UTC())
 	if err != nil {
 		return err
 	}
@@ -73,6 +85,12 @@ func (h *Handler) advance(ctx context.Context) error {
 	var m Manifest
 	if err = json.Unmarshal(raw, &m); err != nil {
 		return err
+	}
+	terminal := state == "stopped"
+	if terminal {
+		h.terminalMu.Lock()
+		h.terminalAfter = runID
+		h.terminalMu.Unlock()
 	}
 	now := h.clock().UTC()
 	if state != "stopping" && !now.Before(deadline) {
@@ -91,21 +109,39 @@ func (h *Handler) advance(ctx context.Context) error {
 		}
 		state = "running"
 	}
-	requests, err := h.db.QueryContext(ctx, `SELECT sequence,ride_id,idempotency_key,trip_id,scheduled_at,assignment_state,trip_state,vehicle_id FROM simulation_requests WHERE run_id=$1 ORDER BY sequence`, runID)
+	if terminal {
+		// Terminal snapshots are immutable. Replay pre-Stop demand, then reconcile
+		// one issued event. A confirmed in-progress trip may issue its pre-created
+		// completion event when due; no unclaimed demand or start is created.
+		var x workerRequest
+		var ride, vehicle sql.NullString
+		err = h.db.QueryRowContext(ctx, `SELECT sequence,ride_id,idempotency_key,trip_id,scheduled_at,assignment_state,trip_state,vehicle_id,submitted_at FROM simulation_requests WHERE run_id=$1 AND submitted_at IS NOT NULL AND ride_id IS NULL AND assignment_state IN ('pending','unfinished') ORDER BY sequence LIMIT 1`, runID).Scan(&x.seq, &ride, &x.key, &x.trip, &x.scheduled, &x.assignment, &x.tripState, &vehicle, &x.submittedAt)
+		if err == nil {
+			return h.submitRide(ctx, runID, x)
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		var kind string
+		err = h.db.QueryRowContext(ctx, `SELECT r.sequence,r.ride_id,r.idempotency_key,r.trip_id,r.scheduled_at,r.assignment_state,r.trip_state,r.vehicle_id,e.kind FROM simulation_events e JOIN simulation_requests r ON r.run_id=e.run_id AND r.sequence=e.request_sequence WHERE e.run_id=$1 AND e.result='pending' AND ((e.issued_at IS NOT NULL AND e.payload IS NOT NULL) OR (e.kind='trip_complete' AND e.payload IS NULL AND r.trip_state IN ('in_progress','unfinished') AND e.scheduled_at<=$2)) ORDER BY e.sequence LIMIT 1`, runID, now).Scan(&x.seq, &ride, &x.key, &x.trip, &x.scheduled, &x.assignment, &x.tripState, &vehicle, &kind)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		x.ride, x.vehicle = ride.String, vehicle.String
+		return h.advanceTrip(ctx, runID, x, kind == "trip_complete")
+	}
+	requests, err := h.db.QueryContext(ctx, `SELECT sequence,ride_id,idempotency_key,trip_id,scheduled_at,assignment_state,trip_state,vehicle_id,submitted_at FROM simulation_requests WHERE run_id=$1 ORDER BY sequence`, runID)
 	if err != nil {
 		return err
 	}
-	type req struct {
-		seq                            int
-		ride, key, trip                string
-		scheduled                      time.Time
-		assignment, tripState, vehicle string
-	}
-	list := []req{}
+	list := []workerRequest{}
 	for requests.Next() {
-		var x req
+		var x workerRequest
 		var ride, vehicle sql.NullString
-		if err = requests.Scan(&x.seq, &ride, &x.key, &x.trip, &x.scheduled, &x.assignment, &x.tripState, &vehicle); err != nil {
+		if err = requests.Scan(&x.seq, &ride, &x.key, &x.trip, &x.scheduled, &x.assignment, &x.tripState, &vehicle, &x.submittedAt); err != nil {
 			requests.Close()
 			return err
 		}
@@ -132,10 +168,13 @@ func (h *Handler) advance(ctx context.Context) error {
 			return ctx.Err()
 		}
 		if x.assignment == "pending" {
-			if state == "stopping" || now.Before(x.scheduled) || inflight >= m.MaxInFlight {
+			if state == "stopping" && !x.submittedAt.Valid {
 				continue
 			}
-			if now.After(x.scheduled.Add(time.Duration(m.DurationSeconds) * time.Second)) {
+			if state != "stopping" && (now.Before(x.scheduled) || inflight >= m.MaxInFlight) {
+				continue
+			}
+			if !x.submittedAt.Valid && now.After(x.scheduled.Add(time.Duration(m.DurationSeconds)*time.Second)) {
 				_, _ = h.db.ExecContext(ctx, `UPDATE simulation_requests SET assignment_state='unfinished' WHERE run_id=$1 AND sequence=$2`, runID, x.seq)
 				continue
 			}
@@ -208,12 +247,30 @@ func (h *Handler) advance(ctx context.Context) error {
 	return dispatchErr
 }
 
-func (h *Handler) submitRide(ctx context.Context, runID string, x struct {
-	seq                            int
-	ride, key, trip                string
-	scheduled                      time.Time
-	assignment, tripState, vehicle string
-}) error {
+func (h *Handler) submitRide(ctx context.Context, runID string, x workerRequest) error {
+	// submitted_at is the durable request-issuance marker. The run row lock
+	// orders this claim against Stop; retries after Stop reuse the same key.
+	tx, err := h.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var state string
+	var issued sql.NullTime
+	if err = tx.QueryRowContext(ctx, `SELECT r.state,q.submitted_at FROM simulation_runs r JOIN simulation_requests q USING(run_id) WHERE r.run_id=$1 AND q.sequence=$2 FOR UPDATE OF r,q`, runID, x.seq).Scan(&state, &issued); err != nil {
+		return err
+	}
+	if !issued.Valid {
+		if state != "running" {
+			return nil
+		}
+		if _, err = tx.ExecContext(ctx, `UPDATE simulation_requests SET submitted_at=$3 WHERE run_id=$1 AND sequence=$2 AND submitted_at IS NULL`, runID, x.seq, h.clock().UTC()); err != nil {
+			return err
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return err
+	}
 	body := map[string]any{"pickup_zone": "lansdowne", "dropoff_zone": "centretown", "passengers": 1}
 	var result struct {
 		RideID string `json:"ride_id"`
@@ -225,7 +282,7 @@ func (h *Handler) submitRide(ctx context.Context, runID string, x struct {
 	if !idPattern.MatchString(result.RideID) {
 		return errors.New("Ride returned invalid identity")
 	}
-	_, err := h.db.ExecContext(ctx, `UPDATE simulation_requests SET ride_id=$3,assignment_state='accepted',submitted_at=COALESCE(submitted_at,$4) WHERE run_id=$1 AND sequence=$2`, runID, x.seq, result.RideID, h.clock().UTC())
+	_, err = h.db.ExecContext(ctx, `UPDATE simulation_requests SET ride_id=$3,assignment_state='accepted' WHERE run_id=$1 AND sequence=$2 AND submitted_at IS NOT NULL`, runID, x.seq, result.RideID)
 	return err
 }
 func (h *Handler) rateLimited(ctx context.Context, runID string, rate int, now time.Time) bool {
@@ -236,12 +293,7 @@ func (h *Handler) rateLimited(ctx context.Context, runID string, rate int, now t
 	return n >= rate
 }
 
-func (h *Handler) advanceTrip(ctx context.Context, runID string, x struct {
-	seq                            int
-	ride, key, trip                string
-	scheduled                      time.Time
-	assignment, tripState, vehicle string
-}, complete bool) error {
+func (h *Handler) advanceTrip(ctx context.Context, runID string, x workerRequest, complete bool) error {
 	var trip struct {
 		RideID          string     `json:"ride_id"`
 		AssignmentState string     `json:"assignment_state"`
@@ -272,6 +324,20 @@ func (h *Handler) advanceTrip(ctx context.Context, runID string, x struct {
 		if err != nil {
 			return err
 		}
+		if trip.StartedAt != nil {
+			if _, err = h.db.ExecContext(ctx, `UPDATE simulation_events SET scheduled_at=$3 WHERE run_id=$1 AND request_sequence=$2 AND kind='trip_complete' AND result='pending' AND payload IS NULL`, runID, x.seq, trip.StartedAt.Add(8*time.Second)); err != nil {
+				return err
+			}
+		}
+		return h.markEventApplied(ctx, runID, x.seq, "trip_start")
+	}
+	if !complete && trip.TripState == "completed" {
+		if trip.TripID != x.trip || trip.VehicleID != x.vehicle {
+			return errors.New("Ride completed trip identity differs from durable request")
+		}
+		if _, err := h.db.ExecContext(ctx, `UPDATE simulation_requests SET trip_state='completed' WHERE run_id=$1 AND sequence=$2`, runID, x.seq); err != nil {
+			return err
+		}
 		return h.markEventApplied(ctx, runID, x.seq, "trip_start")
 	}
 	if complete {
@@ -299,6 +365,7 @@ func (h *Handler) advanceTrip(ctx context.Context, runID string, x struct {
 	}
 	var payload []byte
 	err := h.db.QueryRowContext(ctx, `SELECT payload FROM simulation_events WHERE event_id=$1`, eventID).Scan(&payload)
+	var issued bool
 	if errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
@@ -326,9 +393,12 @@ func (h *Handler) advanceTrip(ctx context.Context, runID string, x struct {
 		if complete && trip.StartedAt != nil {
 			due = trip.StartedAt.Add(8 * time.Second)
 		}
-		_, err = h.db.ExecContext(ctx, `UPDATE simulation_events SET ride_id=$2,trip_id=$3,vehicle_id=$4,expected_trip_version=$5,expected_vehicle_version=$6,payload=$7::jsonb,scheduled_at=$8,issued_at=COALESCE(issued_at,$9) WHERE event_id=$1 AND payload IS NULL`, eventID, x.ride, tripID, x.vehicle, expectedTrip, pos.VehicleVersion, string(payload), due, h.clock().UTC())
+		payload, issued, err = h.persistIssuedPayload(ctx, runID, eventID, payload, !complete, x.ride, tripID, x.vehicle, expectedTrip, pos.VehicleVersion, due)
 		if err != nil {
 			return err
+		}
+		if !issued {
+			return nil
 		}
 	} else {
 		if trip.TripState == "in_progress" && !complete {
@@ -393,6 +463,37 @@ func (h *Handler) advanceTrip(ctx context.Context, runID string, x struct {
 	_, err = h.db.ExecContext(ctx, `UPDATE simulation_events SET scheduled_at=$2 WHERE event_id=$1`, completeEvent, h.clock().UTC().Add(8*time.Second))
 	_ = sequence
 	return err
+}
+
+// persistIssuedPayload serializes first issuance against Stop using the run row.
+// Existing payloads are stable identities and remain replayable in terminal states.
+func (h *Handler) persistIssuedPayload(ctx context.Context, runID, eventID string, candidate []byte, requireRunning bool, rideID, tripID, vehicleID string, tripVersion, vehicleVersion int64, due time.Time) ([]byte, bool, error) {
+	tx, err := h.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, false, err
+	}
+	defer tx.Rollback()
+	var state string
+	if err = tx.QueryRowContext(ctx, `SELECT state FROM simulation_runs WHERE run_id=$1 FOR UPDATE`, runID).Scan(&state); err != nil {
+		return nil, false, err
+	}
+	var stored []byte
+	if err = tx.QueryRowContext(ctx, `SELECT payload FROM simulation_events WHERE event_id=$1 FOR UPDATE`, eventID).Scan(&stored); err != nil {
+		return nil, false, err
+	}
+	if len(stored) == 0 {
+		if requireRunning && state != "running" {
+			return nil, false, nil
+		}
+		if _, err = tx.ExecContext(ctx, `UPDATE simulation_events SET ride_id=$2,trip_id=$3,vehicle_id=$4,expected_trip_version=$5,expected_vehicle_version=$6,payload=$7::jsonb,scheduled_at=$8,issued_at=COALESCE(issued_at,$9) WHERE event_id=$1 AND payload IS NULL`, eventID, rideID, tripID, vehicleID, tripVersion, vehicleVersion, string(candidate), due, h.clock().UTC()); err != nil {
+			return nil, false, err
+		}
+		stored = candidate
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, false, err
+	}
+	return stored, true, nil
 }
 
 func (h *Handler) markEventApplied(ctx context.Context, runID string, requestSequence int, kind string) error {
@@ -487,10 +588,10 @@ func (h *Handler) finishRun(ctx context.Context, runID, state, reason string, dr
 	}
 	if state == "stopping" && !now.Before(drain) {
 		var unfinishedTrips, unfinishedReq, unfinishedEvents int
-		if err := h.db.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM simulation_requests WHERE run_id=$1 AND trip_state='in_progress'),(SELECT count(*) FROM simulation_requests WHERE run_id=$1 AND trip_state<>'completed'),(SELECT count(*) FROM simulation_events WHERE run_id=$1 AND result='pending')`, runID).Scan(&unfinishedTrips, &unfinishedReq, &unfinishedEvents); err != nil {
+		if err := h.db.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM simulation_requests q WHERE q.run_id=$1 AND (q.trip_state='in_progress' OR EXISTS (SELECT 1 FROM simulation_events e WHERE e.run_id=q.run_id AND e.request_sequence=q.sequence AND e.kind='trip_start' AND e.issued_at IS NOT NULL AND e.result='pending'))),(SELECT count(*) FROM simulation_requests WHERE run_id=$1 AND trip_state NOT IN ('completed','cancelled')),(SELECT count(*) FROM simulation_events WHERE run_id=$1 AND result='pending')`, runID).Scan(&unfinishedTrips, &unfinishedReq, &unfinishedEvents); err != nil {
 			return err
 		}
-		_, err := h.db.ExecContext(ctx, `UPDATE simulation_requests SET trip_state=CASE WHEN trip_state='in_progress' THEN 'unfinished' ELSE trip_state END,assignment_state=CASE WHEN assignment_state IN ('pending','accepted','assigned') THEN 'unfinished' ELSE assignment_state END WHERE run_id=$1 AND trip_state<>'completed'`, runID)
+		_, err := h.db.ExecContext(ctx, `UPDATE simulation_requests q SET trip_state=CASE WHEN q.trip_state='in_progress' OR EXISTS (SELECT 1 FROM simulation_events e WHERE e.run_id=q.run_id AND e.request_sequence=q.sequence AND e.kind='trip_start' AND e.issued_at IS NOT NULL AND e.result='pending') THEN 'unfinished' ELSE q.trip_state END,assignment_state=CASE WHEN q.assignment_state IN ('pending','accepted','assigned') THEN 'unfinished' ELSE q.assignment_state END WHERE q.run_id=$1 AND q.trip_state NOT IN ('completed','cancelled')`, runID)
 		if err != nil {
 			return err
 		}

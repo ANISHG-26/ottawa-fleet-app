@@ -17,6 +17,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ANISHG-26/ottawa-fleet-app/services/internal/httpapi"
@@ -63,11 +65,14 @@ type Config struct {
 	Client            *http.Client
 }
 type Handler struct {
-	db     *sql.DB
-	config Config
-	clock  func() time.Time
-	client *http.Client
-	mux    http.Handler
+	db            *sql.DB
+	config        Config
+	clock         func() time.Time
+	client        *http.Client
+	mux           http.Handler
+	dispatchTurn  atomic.Uint32
+	terminalMu    sync.Mutex
+	terminalAfter string
 }
 
 func NewHandler(db *sql.DB, config Config) *Handler {
