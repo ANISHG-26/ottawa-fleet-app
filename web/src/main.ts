@@ -1,6 +1,6 @@
 import { ApiError, getFleet, getRides, submitRide } from './api';
 import { deriveAvailability, emptySnapshot, failedSnapshot, makeIdempotencyKey, successfulSnapshot, ZONES, type Ride, type RideRequest, type Snapshot, type Vehicle } from './domain';
-import { createRun, getPosition, getRoute, getRun, getRunEvents, getVehicles, interpolatePosition, mapLimit, scenarioManifest, stopRun, type Position, type Route, type Run, type SimulationEvent } from './simulation';
+import { createRun, getPosition, getRoute, getRun, getRunEvents, getTrip, getVehicles, interpolatePosition, mapLimit, scenarioManifest, stopRun, type Position, type Route, type Run, type SimulationEvent, type Trip } from './simulation';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './map.css';
@@ -40,6 +40,7 @@ let simulationRun: Run | undefined;
 let simulationRoute: Route | undefined;
 let simulationVehicles: string[] = [];
 let simulationPositions: Position[] = [];
+let simulationTrips: Trip[] = [];
 let simulationEvents: SimulationEvent[] = [];
 let simulationPollTimer: number | undefined;
 let simulationFrame: number | undefined;
@@ -47,11 +48,35 @@ let simulationBusy = false;
 const simulationMarkers = new Map<string, L.CircleMarker>();
 let simulationRouteLine: L.Polyline | undefined;
 let simulationMessage = 'Controller not checked yet.';
-let selectedSimulationVehicle = 'all';
+const SIMULATION_RUN_STORAGE_KEY = 'ottawa-fleet.simulation-run-id';
+const SIMULATION_VEHICLE_STORAGE_KEY = 'ottawa-fleet.simulation-vehicle-id';
+const SIMULATION_PENDING_MANIFEST_KEY = 'ottawa-fleet.simulation-pending-manifest';
+let simulationPendingManifest: ReturnType<typeof scenarioManifest> | undefined = readPendingManifest();
+let selectedSimulationVehicle = readStoredValue(SIMULATION_VEHICLE_STORAGE_KEY) ?? 'all';
+
+function readPendingManifest(): ReturnType<typeof scenarioManifest> | undefined {
+  try { const saved = localStorage.getItem(SIMULATION_PENDING_MANIFEST_KEY); return saved ? JSON.parse(saved) as ReturnType<typeof scenarioManifest> : undefined; } catch { return undefined; }
+}
+
+function readStoredValue(key: string): string | undefined {
+  try { return localStorage.getItem(key) ?? undefined; } catch { return undefined; }
+}
+
+function storeValue(key: string, value: string) {
+  try { localStorage.setItem(key, value); } catch { /* Storage can be disabled; the live session still works. */ }
+}
 
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
 const formatTime = (value?: string) => value ? `${new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'medium', timeZone: 'UTC' }).format(new Date(value))} UTC` : 'No successful response yet';
 const label = (value: string) => value.replaceAll('_', ' ').replace(/\b\w/g, char => char.toUpperCase());
+function positionAge(position: Position, now = Date.now()) {
+  const asOf = Date.parse(position.as_of), observed = Date.parse(position.observed_at);
+  const ageMs = now - asOf, observedAgeMs = asOf - observed;
+  const future = Number.isFinite(ageMs) && ageMs < 0 || Number.isFinite(observedAgeMs) && observedAgeMs < 0;
+  const fresh = position.freshness === 'fresh' && Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= 30_000
+    && Number.isFinite(observedAgeMs) && observedAgeMs >= 0 && observedAgeMs <= 30_000;
+  return { fresh, future, ageMs: Math.max(0, ageMs) };
+}
 
 app.innerHTML = `
   <main class="shell">
@@ -73,6 +98,7 @@ app.innerHTML = `
     <section class="panel simulation-panel" aria-labelledby="simulation-heading">
       <div class="panel-heading"><div><div class="eyebrow">OPT-IN SYNTHETIC SCENARIO</div><h2 id="simulation-heading">Route simulation</h2><p>Uses the pinned Lansdowne → Centretown route profile. The browser does not complete rides.</p></div><span class="panel-icon">⌁</span></div>
       <div class="simulation-controls">
+        <label>Scenario preset <select id="sim-preset"><option value="normal">Normal · 4 requests</option><option value="event-exit">Event-exit · 20 requests / 60 events</option><option value="custom">Custom settings</option></select></label>
         <label>Requests <input id="sim-requests" type="number" min="1" max="20" value="4" /></label>
         <label>Events / second <input id="sim-rate" type="number" min="1" max="4" value="1" /></label>
         <label>Duration (seconds) <input id="sim-duration" type="number" min="1" max="60" value="30" /></label>
@@ -81,9 +107,12 @@ app.innerHTML = `
         <label>Vehicle on map <select id="sim-vehicle"><option value="all">All synthetic vehicles</option></select></label>
       </div>
       <label class="simulation-consent"><input id="sim-opt-in" type="checkbox" /> Start an opt-in synthetic run against the local Simulation Controller.</label>
-      <div class="simulation-actions"><button class="primary-button" id="sim-start" type="button" disabled>Start scenario</button><button class="secondary-button" id="sim-stop" type="button" disabled>Stop and drain</button><span id="sim-state" role="status" aria-live="polite">Controller not checked yet.</span></div>
+      <div class="simulation-actions"><button class="primary-button" id="sim-start" type="button" disabled>Start scenario</button><button class="secondary-button" id="sim-stop" type="button" disabled>Stop and drain</button><button class="secondary-button" id="sim-new-intent" type="button" hidden>Discard pending start and set new scenario</button><span id="sim-state" role="status" aria-live="polite">Controller not checked yet.</span></div>
       <p id="sim-summary" class="simulation-summary">No simulation run selected.</p>
       <div id="sim-events" class="simulation-events" aria-live="polite">Run events will appear here when the controller is available.</div>
+      <div id="sim-trip-legend" class="sim-trip-legend" aria-label="Trip state legend">Assignment completed means a vehicle was assigned; passenger trip continues until trip state is completed.</div>
+      <div id="sim-trip-list" class="sim-trip-list" aria-label="Run trip details"></div>
+      <p id="sim-vehicle-detail" class="sim-vehicle-detail" aria-live="polite">Select a synthetic vehicle to inspect its latest position.</p>
     </section>
     <section class="panel fleet-panel">
       <div class="panel-heading"><div><div class="eyebrow">INVENTORY</div><h2>Fleet availability</h2><p>Freshness is derived from each vehicle observation and the Fleet API’s <code>as_of</code> clock.</p></div><div id="fleet-state"></div></div>
@@ -170,35 +199,124 @@ function renderSimulationState() {
   const optedIn = document.querySelector<HTMLInputElement>('#sim-opt-in')?.checked ?? false;
   document.querySelector<HTMLElement>('#sim-state')!.textContent = simulationMessage;
   document.querySelector<HTMLElement>('#sim-summary')!.textContent = simulationRun
-    ? `Run ${simulationRun.run_id} · ${simulationRun.state} · ${simulationRun.completed_events}/${simulationRun.issued_events} events confirmed`
-    : 'No simulation run selected.';
+    ? `Run ${simulationRun.run_id} · ${simulationRun.state} · ${simulationRun.completed_events}/${simulationRun.issued_events} events confirmed · ${Number(simulationRun.manifest.request_count ?? 0)} planned requests · ${Number(simulationRun.manifest.event_rate_per_second ?? 0)} events/s · ${Number(simulationRun.manifest.duration_seconds ?? 0)}s · concurrency ${Number(simulationRun.manifest.max_in_flight ?? 0)} · UTC deadline ${formatTime(simulationRun.deadline_at)}${simulationRun.terminal_reason ? ` · ${label(simulationRun.terminal_reason)}` : ''}${simulationRun.state === 'completed' || simulationRun.state === 'stopped' || simulationRun.state === 'failed' ? ` · incomplete ${simulationRun.incomplete_trips ?? 0} trips / ${simulationRun.incomplete_requests ?? 0} requests / ${simulationRun.incomplete_events ?? 0} events` : ''}`
+    : simulationPendingManifest ? `Start response is uncertain. Retry uses the same idempotency key and settings for ${Number(simulationPendingManifest.request_count)} requests.` : 'No simulation run selected.';
   document.querySelector<HTMLElement>('#sim-events')!.textContent = simulationRun
-    ? `Bounded event history (${simulationEvents.length}/20): ${simulationEvents.map(event => `#${event.sequence} ${event.kind} · ${event.result}`).join(' | ') || 'No events yet'} · ${simulationPositions.length} position reads (${simulationPositions.filter(position => position.freshness === 'fresh').length} fresh)`
+    ? `Bounded event history (${simulationEvents.length}/60): ${simulationEvents.map(event => `#${event.sequence} ${event.kind} · ${event.result}`).join(' | ') || 'No events yet'} · ${simulationPositions.length} last successful position reads (${simulationPositions.filter(position => positionAge(position).fresh).length} fresh)`
     : 'Run events will appear here when the controller is available.';
   document.querySelector<HTMLButtonElement>('#sim-start')!.disabled = !optedIn || simulationBusy || Boolean(simulationRun && ['scheduled', 'running', 'stopping'].includes(simulationRun.state));
+  document.querySelector<HTMLButtonElement>('#sim-start')!.textContent = simulationPendingManifest ? 'Retry same scenario start' : 'Start scenario';
+  document.querySelector<HTMLButtonElement>('#sim-new-intent')!.hidden = !simulationPendingManifest || Boolean(simulationRun);
+  document.querySelector<HTMLInputElement>('#sim-opt-in')!.disabled = Boolean(simulationRun && ['scheduled', 'running', 'stopping'].includes(simulationRun.state));
   document.querySelector<HTMLButtonElement>('#sim-stop')!.disabled = simulationBusy || !simulationRun || !['scheduled', 'running', 'stopping'].includes(simulationRun.state);
+  document.querySelector<HTMLInputElement>('#sim-opt-in')!.disabled = Boolean(simulationRun && ['scheduled', 'running', 'stopping'].includes(simulationRun.state));
+  document.querySelectorAll<HTMLInputElement>('.simulation-controls input').forEach(input => { input.disabled = Boolean(simulationPendingManifest) || Boolean(simulationRun && ['scheduled', 'running', 'stopping'].includes(simulationRun.state)); });
+  document.querySelector<HTMLSelectElement>('#sim-preset')!.disabled = Boolean(simulationPendingManifest) || Boolean(simulationRun && ['scheduled', 'running', 'stopping'].includes(simulationRun.state));
   const select = document.querySelector<HTMLSelectElement>('#sim-vehicle')!;
-  const selected = select.value || selectedSimulationVehicle;
+  const selected = selectedSimulationVehicle !== 'all' ? selectedSimulationVehicle : select.value || 'all';
   select.innerHTML = '<option value="all">All synthetic vehicles</option>' + simulationVehicles.slice(0, 20).map(id => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join('');
-  select.value = simulationVehicles.includes(selected) ? selected : 'all';
-  selectedSimulationVehicle = select.value;
+  if (simulationVehicles.length) {
+    select.value = simulationVehicles.includes(selected) ? selected : 'all';
+    selectedSimulationVehicle = select.value;
+  } else select.value = 'all';
+  const tripsHost = document.querySelector<HTMLDivElement>('#sim-trip-list')!;
+  tripsHost.innerHTML = simulationTrips.length ? simulationTrips.map(trip => {
+    const active = selectedSimulationVehicle !== 'all' && trip.vehicle_id === selectedSimulationVehicle;
+    return `<button type="button" class="sim-trip-card${active ? ' selected' : ''}" data-ride-id="${escapeHtml(trip.ride_id)}" data-vehicle-id="${escapeHtml(trip.vehicle_id ?? '')}" aria-pressed="${active}"><strong>${escapeHtml(trip.ride_id)}</strong><span>Assignment: ${label(trip.assignment_state)}</span><span>Trip: ${label(trip.trip_state)}</span><small>${escapeHtml(trip.trip_id ?? 'Trip identity pending')} · ${escapeHtml(trip.vehicle_id ?? 'Vehicle pending')}</small></button>`;
+  }).join('') : '<span class="sim-empty-detail">Ride and trip details appear as run events are accepted.</span>';
+  tripsHost.querySelectorAll<HTMLButtonElement>('.sim-trip-card').forEach(button => button.addEventListener('click', () => {
+    const vehicleId = button.dataset.vehicleId ?? '';
+    selectedSimulationVehicle = vehicleId || 'all';
+    storeValue(SIMULATION_VEHICLE_STORAGE_KEY, selectedSimulationVehicle);
+    const select = document.querySelector<HTMLSelectElement>('#sim-vehicle')!;
+    select.value = selectedSimulationVehicle;
+    reconcileSimulationMap();
+    renderSimulationState();
+  }));
+  renderSelectedVehicleDetail();
+}
+
+function renderSelectedVehicleDetail() {
+  const detail = document.querySelector<HTMLElement>('#sim-vehicle-detail');
+  if (!detail) return;
+  const positions = selectedSimulationVehicle === 'all' ? simulationPositions : simulationPositions.filter(item => item.vehicle_id === selectedSimulationVehicle);
+  const now = Date.now();
+  detail.textContent = positions.length ? positions.map(position => {
+    const state = positionAge(position, now);
+    const age = Number.isFinite(state.ageMs) ? `${Math.floor(state.ageMs / 1000)}s old` : 'age unavailable';
+    return `${position.vehicle_id}: ${position.operational_state} · ${state.fresh ? 'Fresh' : state.future ? 'Future-dated' : 'Last known'} · ${age} · observed ${formatTime(position.observed_at)}`;
+  }).join(' | ') : selectedSimulationVehicle === 'all' ? 'Select a synthetic vehicle to inspect its latest position.' : `${selectedSimulationVehicle}: waiting for a successful position read.`;
 }
 
 function drawSimulationPositions() {
   if (!fleetMap || document.hidden) return;
+  reconcileSimulationMap();
+  simulationFrame = matchMedia('(prefers-reduced-motion: reduce)').matches ? undefined : requestAnimationFrame(drawSimulationPositions);
+}
+
+function reconcileSimulationMap() {
+  if (!fleetMap) { renderSelectedVehicleDetail(); return; }
   const now = Date.now();
-  for (const position of simulationPositions.filter(item => selectedSimulationVehicle === 'all' || item.vehicle_id === selectedSimulationVehicle)) {
+  const visible = new Set(simulationPositions.filter(item => selectedSimulationVehicle === 'all' || item.vehicle_id === selectedSimulationVehicle).map(item => item.vehicle_id));
+  for (const [id, marker] of simulationMarkers) if (!visible.has(id) && fleetMap.hasLayer(marker)) marker.remove();
+  for (const position of simulationPositions) {
     const point = interpolatePosition(position, now);
+    const state = positionAge(position, now);
+    const ageMs = state.ageMs;
     let marker = simulationMarkers.get(position.vehicle_id);
     if (!marker) {
-      marker = L.circleMarker([point.latitude, point.longitude], { radius: 7, color: '#122018', weight: 2, fillColor: '#b6f06c', fillOpacity: 1 })
-        .bindTooltip(`Synthetic vehicle ${escapeHtml(position.vehicle_id)}`);
-      marker.addTo(fleetMap);
+      marker = L.circleMarker([point.latitude, point.longitude], { radius: 7, color: '#122018', weight: 2, fillColor: '#b6f06c', fillOpacity: 1, className: 'simulation-vehicle-marker' });
       simulationMarkers.set(position.vehicle_id, marker);
     } else marker.setLatLng([point.latitude, point.longitude]);
-    marker.setStyle({ fillColor: position.freshness === 'fresh' ? '#b6f06c' : '#edc270', opacity: selectedSimulationVehicle === 'all' || selectedSimulationVehicle === position.vehicle_id ? (position.freshness === 'fresh' ? 1 : 0.65) : 0.12 });
+    marker.setTooltipContent(`Synthetic vehicle ${escapeHtml(position.vehicle_id)} · ${state.fresh ? 'Fresh' : `${state.future ? 'Future-dated' : 'Last known'} · ${Math.floor(ageMs / 1000)}s old`}`);
+    marker.setStyle({ fillColor: state.fresh ? '#b6f06c' : '#edc270', opacity: visible.has(position.vehicle_id) ? (state.fresh ? 1 : 0.8) : 0.18, radius: selectedSimulationVehicle === position.vehicle_id ? 10 : 7, weight: selectedSimulationVehicle === position.vehicle_id ? 4 : 2 });
+    if (visible.has(position.vehicle_id) && !fleetMap.hasLayer(marker)) marker.addTo(fleetMap);
   }
-  simulationFrame = matchMedia('(prefers-reduced-motion: reduce)').matches ? undefined : requestAnimationFrame(drawSimulationPositions);
+  simulationRouteLine?.setStyle({ color: selectedSimulationVehicle === 'all' ? '#b6f06c' : '#edc270', weight: selectedSimulationVehicle === 'all' ? 3 : 5, opacity: selectedSimulationVehicle === 'all' ? 0.45 : 0.95 });
+  renderSelectedVehicleDetail();
+}
+
+function clearSimulationSnapshotForNewRun() {
+  simulationEvents = [];
+  simulationTrips = [];
+  simulationPositions = [];
+  simulationVehicles = [];
+  simulationMarkers.forEach(marker => marker.remove());
+  simulationMarkers.clear();
+  simulationRouteLine?.remove();
+  simulationRouteLine = undefined;
+  simulationRoute = undefined;
+  reconcileSimulationMap();
+}
+
+async function loadRunSnapshot(run: Run) {
+  let cursor: string | null = null;
+  const events: SimulationEvent[] = [];
+  for (let page = 0; page < 3; page++) {
+    const result = await getRunEvents(run.run_id, cursor);
+    events.push(...result.items);
+    cursor = result.next_cursor;
+    if (!cursor) break;
+  }
+  simulationEvents = events.slice(0, 60);
+  if (!simulationRoute) simulationRoute = await getRoute();
+  simulationVehicles = simulationVehicles.length ? simulationVehicles : await getVehicles();
+  const rideIds = [...new Set(simulationEvents.map(event => event.ride_id).filter((id): id is string => Boolean(id)))];
+  const trips = await mapLimit(rideIds, 4, async rideId => getTrip(rideId).catch(() => undefined));
+  const priorTrips = new Map(simulationTrips.map(trip => [trip.ride_id, trip]));
+  for (const trip of trips) if (trip) priorTrips.set(trip.ride_id, trip);
+  simulationTrips = [...priorTrips.values()];
+  const positions = await mapLimit(simulationVehicles.slice(0, 20), 4, async id => ({ id, position: await getPosition(id).catch(() => undefined) }));
+  const nextPositions = new Map(simulationPositions.map(position => [position.vehicle_id, position]));
+  for (const result of positions) if (result.position) nextPositions.set(result.id, result.position);
+  simulationPositions = [...nextPositions.values()];
+  if (fleetMap && simulationRouteLine === undefined) simulationRouteLine = L.polyline(
+    simulationRoute.points.map(point => [point.latitude, point.longitude] as L.LatLngExpression),
+    { color: '#b6f06c', weight: 3, opacity: 0.45, dashArray: '5 7' }
+  ).addTo(fleetMap);
+  if (simulationFrame === undefined && !matchMedia('(prefers-reduced-motion: reduce)').matches && !document.hidden) simulationFrame = requestAnimationFrame(drawSimulationPositions);
+  else reconcileSimulationMap();
+  render();
 }
 
 async function pollSimulation() {
@@ -207,23 +325,12 @@ async function pollSimulation() {
   simulationBusy = true;
   try {
     simulationRun = await getRun(simulationRun.run_id);
-    simulationEvents = (await getRunEvents(simulationRun.run_id)).items.slice(0, 20);
-    if (!simulationRoute) simulationRoute = await getRoute();
-    simulationVehicles = simulationVehicles.length ? simulationVehicles : await getVehicles();
-    simulationPositions = await mapLimit(simulationVehicles.slice(0, 20), 4, async id => getPosition(id));
-    if (fleetMap && simulationRouteLine === undefined) simulationRouteLine = L.polyline(
-      simulationRoute.points.map(point => [point.latitude, point.longitude] as L.LatLngExpression),
-      { color: '#b6f06c', weight: 3, opacity: 0.8, dashArray: '5 7' }
-    ).addTo(fleetMap);
-    if (simulationFrame === undefined) simulationFrame = requestAnimationFrame(drawSimulationPositions);
+    await loadRunSnapshot(simulationRun);
     simulationMessage = `Controller connected · ${simulationRun.state}`;
   } catch (error) {
     simulationMessage = `Simulation unavailable: ${error instanceof Error ? error.message : 'controller or Fleet position API unavailable'}`;
-    if (simulationFrame !== undefined) cancelAnimationFrame(simulationFrame);
-    simulationFrame = undefined;
-    simulationPositions = [];
-    simulationMarkers.forEach(marker => marker.remove());
-    simulationMarkers.clear();
+    // Keep the last server snapshot. Its own as_of/freshness fields stop
+    // interpolation at the observed point after it ages out.
   } finally {
     simulationBusy = false;
     renderSimulationState();
@@ -233,28 +340,58 @@ async function pollSimulation() {
 }
 
 document.querySelector<HTMLInputElement>('#sim-opt-in')!.addEventListener('change', renderSimulationState);
-document.querySelector<HTMLSelectElement>('#sim-vehicle')!.addEventListener('change', event => {
+document.querySelector<HTMLSelectElement>('#sim-preset')!.addEventListener('change', event => {
+  const preset = (event.currentTarget as HTMLSelectElement).value;
+  const settings = preset === 'normal' ? { requests: 4, rate: 1, duration: 30, concurrency: 2 } : preset === 'event-exit' ? { requests: 20, rate: 4, duration: 60, concurrency: 4 } : undefined;
+  if (!settings) return;
+  (document.querySelector<HTMLInputElement>('#sim-requests')!).value = String(settings.requests);
+  (document.querySelector<HTMLInputElement>('#sim-rate')!).value = String(settings.rate);
+  (document.querySelector<HTMLInputElement>('#sim-duration')!).value = String(settings.duration);
+  (document.querySelector<HTMLInputElement>('#sim-concurrency')!).value = String(settings.concurrency);
+});
+document.querySelectorAll<HTMLInputElement>('.simulation-controls input').forEach(input => input.addEventListener('input', () => {
+  const preset = document.querySelector<HTMLSelectElement>('#sim-preset')!;
+  const values = ['#sim-requests', '#sim-rate', '#sim-duration', '#sim-concurrency'].map(selector => Number(document.querySelector<HTMLInputElement>(selector)!.value));
+  preset.value = values.join(',') === [4, 1, 30, 2].join(',') ? 'normal' : values.join(',') === [20, 4, 60, 4].join(',') ? 'event-exit' : 'custom';
+}));
+document.querySelector<HTMLButtonElement>('#sim-new-intent')!.addEventListener('click', () => {
+  simulationPendingManifest = undefined;
+  try { localStorage.removeItem(SIMULATION_PENDING_MANIFEST_KEY); } catch { /* The current session can still choose new settings. */ }
+  simulationMessage = 'Pending start discarded by operator; new settings can be selected.';
+  renderSimulationState();
+});
+  document.querySelector<HTMLSelectElement>('#sim-vehicle')!.addEventListener('change', event => {
   selectedSimulationVehicle = (event.currentTarget as HTMLSelectElement).value;
-  simulationMarkers.forEach((marker, id) => marker.setStyle({ opacity: selectedSimulationVehicle === 'all' || selectedSimulationVehicle === id ? 1 : 0.12 }));
+  storeValue(SIMULATION_VEHICLE_STORAGE_KEY, selectedSimulationVehicle);
+  reconcileSimulationMap();
 });
 document.querySelector<HTMLButtonElement>('#sim-start')!.addEventListener('click', async () => {
   if (!document.querySelector<HTMLInputElement>('#sim-opt-in')!.checked || simulationBusy) return;
   simulationBusy = true; simulationMessage = 'Checking the local controller and route profile…'; renderSimulationState();
   try {
     simulationRoute = await getRoute();
-    const manifest = scenarioManifest({
+    const manifest = simulationPendingManifest ?? scenarioManifest({
       requestCount: Number(document.querySelector<HTMLInputElement>('#sim-requests')!.value),
       rate: Number(document.querySelector<HTMLInputElement>('#sim-rate')!.value),
       durationSeconds: Number(document.querySelector<HTMLInputElement>('#sim-duration')!.value),
       concurrency: Number(document.querySelector<HTMLInputElement>('#sim-concurrency')!.value),
       seed: Number(document.querySelector<HTMLInputElement>('#sim-seed')!.value)
     }, makeIdempotencyKey());
+    if (!simulationPendingManifest) {
+      simulationPendingManifest = manifest;
+      try { localStorage.setItem(SIMULATION_PENDING_MANIFEST_KEY, JSON.stringify(manifest)); } catch { /* Keep the same manifest in memory for this page session. */ }
+    }
+    const priorRunId = simulationRun?.run_id;
     simulationRun = await createRun(manifest);
+    if (priorRunId && priorRunId !== simulationRun.run_id) clearSimulationSnapshotForNewRun();
+    simulationPendingManifest = undefined;
+    try { localStorage.removeItem(SIMULATION_PENDING_MANIFEST_KEY); } catch { /* The accepted run ID is the durable browser selection. */ }
+    storeValue(SIMULATION_RUN_STORAGE_KEY, simulationRun.run_id);
     simulationMessage = 'Run accepted by local controller.';
     if (simulationRouteLine) simulationRouteLine.remove();
     simulationRouteLine = undefined;
     if (simulationPollTimer !== undefined) clearTimeout(simulationPollTimer);
-  } catch (error) { simulationMessage = `Simulation unavailable: ${error instanceof Error ? error.message : 'controller unavailable'}`; }
+  } catch (error) { simulationMessage = `Start response uncertain. Retry the saved manifest to safely reconcile acceptance. ${error instanceof Error ? error.message : 'controller unavailable'}`; }
   finally {
     simulationBusy = false; renderSimulationState();
     if (simulationRun && ['scheduled', 'running', 'stopping'].includes(simulationRun.state)) simulationPollTimer = window.setTimeout(() => void pollSimulation(), 0);
@@ -283,6 +420,23 @@ matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', event 
   if (event.matches && simulationFrame !== undefined) { cancelAnimationFrame(simulationFrame); simulationFrame = undefined; }
   else if (!event.matches && !document.hidden && simulationPositions.length && simulationFrame === undefined) simulationFrame = requestAnimationFrame(drawSimulationPositions);
 });
+
+async function restoreSimulation() {
+  const runId = readStoredValue(SIMULATION_RUN_STORAGE_KEY);
+  if (!runId || fixtureMode) return;
+  simulationMessage = 'Restoring the last server run…';
+  renderSimulationState();
+  try {
+    simulationRun = await getRun(runId);
+    await loadRunSnapshot(simulationRun);
+    simulationMessage = `Restored run · ${simulationRun.state}`;
+    renderSimulationState();
+    if (['scheduled', 'running', 'stopping'].includes(simulationRun.state)) void pollSimulation();
+  } catch (error) {
+    simulationMessage = `Saved run unavailable: ${error instanceof Error ? error.message : 'controller unavailable'}`;
+    renderSimulationState();
+  }
+}
 
 function connectionBadge(snapshot: Snapshot<unknown>): string {
   const names = { loading: 'Loading', empty: 'No records', ready: 'Connected', stale: 'Stale · cached', unavailable: 'Unavailable' };
@@ -342,7 +496,19 @@ function render() {
   const rideList = document.querySelector<HTMLDivElement>('#ride-list')!;
   if (rideSnapshot.state === 'loading') rideList.innerHTML = '<div class="empty-state">Loading ride history…</div>';
   else if (!rides.length) rideList.innerHTML = `<div class="empty-state">${rideSnapshot.state === 'unavailable' ? `Ride API unavailable. ${escapeHtml(rideSnapshot.message ?? '')}` : 'No rides have been submitted yet.'}</div>`;
-  else rideList.innerHTML = [...rides].reverse().map(ride => `<article class="ride-item"><div class="ride-state-mark state-mark-${ride.state}">${ride.state === 'completed' ? '✓' : ride.state === 'failed' ? '!' : '↻'}</div><div class="ride-main"><div class="ride-title"><strong>${escapeHtml(ride.ride_id)}</strong><span class="ride-status ride-${ride.state}">${label(ride.state)}</span></div><div class="ride-route">${label(escapeHtml(ride.pickup_zone))} <span>→</span> ${label(escapeHtml(ride.dropoff_zone))} <span>· ${ride.passengers} passenger${ride.passengers === 1 ? '' : 's'}</span></div>${ride.vehicle_id ? `<small class="result-note">Assigned ${escapeHtml(ride.vehicle_id)}</small>` : ride.failure_code ? `<small class="result-note failure-note">${label(escapeHtml(ride.failure_code))}</small>` : ''}</div><time>${formatTime(ride.updated_at)}</time></article>`).join('');
+  else rideList.innerHTML = [...rides].reverse().map(ride => { const trip = simulationTrips.find(item => item.ride_id === ride.ride_id); return `<article class="ride-item${trip ? ' ride-trip-selectable' : ''}" ${trip ? `role="button" tabindex="0" aria-label="Select ${escapeHtml(ride.ride_id)} trip and vehicle" data-ride-id="${escapeHtml(ride.ride_id)}"` : ''}><div class="ride-state-mark state-mark-${ride.state}">${ride.state === 'completed' ? '✓' : ride.state === 'failed' ? '!' : '↻'}</div><div class="ride-main"><div class="ride-title"><strong>${escapeHtml(ride.ride_id)}</strong><span class="ride-status ride-${ride.state}">${label(ride.state)}</span></div><div class="ride-route">${label(escapeHtml(ride.pickup_zone))} <span>→</span> ${label(escapeHtml(ride.dropoff_zone))} <span>· ${ride.passengers} passenger${ride.passengers === 1 ? '' : 's'}</span></div>${ride.vehicle_id ? `<small class="result-note">Assigned ${escapeHtml(ride.vehicle_id)}</small>` : ride.failure_code ? `<small class="result-note failure-note">${label(escapeHtml(ride.failure_code))}</small>` : ''}${trip ? `<small class="result-note">Trip ${label(trip.trip_state)} · select to inspect ${escapeHtml(trip.vehicle_id ?? 'vehicle pending')}</small>` : ''}</div><time>${formatTime(ride.updated_at)}</time></article>`; }).join('');
+  rideList.querySelectorAll<HTMLElement>('.ride-trip-selectable').forEach(item => {
+    const selectTrip = () => {
+      const trip = simulationTrips.find(value => value.ride_id === item.dataset.rideId);
+      if (!trip) return;
+      selectedSimulationVehicle = trip.vehicle_id ?? 'all';
+      storeValue(SIMULATION_VEHICLE_STORAGE_KEY, selectedSimulationVehicle);
+      document.querySelector<HTMLSelectElement>('#sim-vehicle')!.value = selectedSimulationVehicle;
+      reconcileSimulationMap(); renderSimulationState();
+    };
+    item.addEventListener('click', selectTrip);
+    item.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectTrip(); } });
+  });
   document.querySelector('#updated-at')!.textContent = fleetSnapshot.lastSuccessAt || rideSnapshot.lastSuccessAt ? `Last check ${formatTime(lastPollAt)}` : 'Waiting for first response';
 }
 
@@ -447,3 +613,4 @@ initializeFleetMap();
 render();
 renderSimulationState();
 void poll();
+void restoreSimulation();

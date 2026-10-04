@@ -109,25 +109,31 @@ test('unavailable fleet is not summarized as zero available vehicles', async ({ 
 
 test('route simulation writes only after opt-in and bounds position polling', async ({ page }, testInfo) => {
   await page.route('https://tile.openstreetmap.org/**', route => route.abort());
-  let postCount = 0, stopCount = 0, activePositionReads = 0, peakPositionReads = 0;
+  await page.route('**/fleet-api/**', route => route.fulfill({ json: { items: [], next_cursor: null, as_of: new Date().toISOString() } }));
+  await page.route('**/ride-api/**', route => route.fulfill({ json: { items: [], next_cursor: null, as_of: new Date().toISOString() } }));
+  let postCount = 0, stopCount = 0, runReadCount = 0, activePositionReads = 0, peakPositionReads = 0;
   const now = new Date().toISOString();
   const routeFixture = { route_id: 'lansdowne-centretown-v1', route_version: 1, start_zone: 'lansdowne', end_zone: 'centretown', duration_seconds: 8, points: Array.from({ length: 21 }, (_, i) => ({ latitude: 45.3995 + i * 0.001, longitude: -75.6823 - i * 0.0005 })) };
   const runFixture = { run_id: 'run-ui-001', state: 'running', manifest: {}, created_at: now, deadline_at: now, issued_events: 1, completed_events: 0, version: 1 };
+  let currentRun = runFixture;
   await page.route('**/simulation-api/v2/simulation/routes/**', route => route.fulfill({ json: routeFixture }));
-  await page.route('**/simulation-api/v2/simulation/runs/run-ui-001/events**', route => route.fulfill({ json: { items: [{ event_id: 'event-ui-001', sequence: 1, kind: 'trip_start', result: 'applied', scheduled_at: now }], next_cursor: null } }));
+  await page.route('**/simulation-api/v2/simulation/runs/run-ui-001/events**', route => route.fulfill({ json: { items: [{ event_id: 'event-ui-001', sequence: 1, kind: 'trip_start', result: 'applied', scheduled_at: now, ride_id: 'ride-ui-001', trip_id: 'trip-ui-001', vehicle_id: 'vehicle-001' }], next_cursor: null } }));
+  await page.route('**/ride-api/v2/rides/ride-ui-001/trip', route => route.fulfill({ json: { ride_id: 'ride-ui-001', assignment_state: 'completed', trip_state: 'in_progress', trip_id: 'trip-ui-001', vehicle_id: 'vehicle-001', start_zone: 'lansdowne', destination_zone: 'centretown', updated_at: now, version: 2 } }));
   await page.route('**/simulation-api/v2/simulation/runs', route => {
     postCount += 1; return route.fulfill({ json: runFixture });
   });
   await page.route('**/simulation-api/v2/simulation/runs/run-ui-001', route => {
-    if (route.request().method() === 'DELETE') { stopCount += 1; return route.fulfill({ json: { ...runFixture, state: 'stopping' } }); }
-    return route.fulfill({ json: runFixture });
+    if (route.request().method() === 'DELETE') { stopCount += 1; currentRun = { ...runFixture, state: 'stopped', terminal_reason: 'requested_stop', incomplete_trips: 1, incomplete_requests: 1, incomplete_events: 2, completed_at: now }; return route.fulfill({ json: currentRun }); }
+    runReadCount += 1;
+    return route.fulfill({ json: currentRun });
   });
   await page.route('**/fleet-api/v1/fleet?limit=20', route => route.fulfill({ json: { items: Array.from({ length: 6 }, (_, i) => ({ vehicle_id: `vehicle-00${i + 1}` })), next_cursor: null, as_of: now } }));
   await page.route('**/fleet-api/v2/fleet/vehicles/*/position', async route => {
     activePositionReads += 1; peakPositionReads = Math.max(peakPositionReads, activePositionReads);
     await new Promise(resolve => setTimeout(resolve, 15));
     activePositionReads -= 1;
-    await route.fulfill({ json: { vehicle_id: 'vehicle-001', position: { latitude: 45.3995, longitude: -75.6823 }, observed_at: now, as_of: now, freshness: 'fresh', operational_state: 'available', vehicle_version: 1 } });
+    const vehicleId = route.request().url().split('/').at(-2)!;
+    await route.fulfill({ json: { vehicle_id: vehicleId, position: { latitude: 45.3995, longitude: -75.6823 }, observed_at: now, as_of: now, freshness: 'fresh', operational_state: 'available', vehicle_version: 1 } });
   });
   await page.goto('/');
   const start = page.getByRole('button', { name: 'Start scenario' });
@@ -138,10 +144,139 @@ test('route simulation writes only after opt-in and bounds position polling', as
   await start.click();
   await expect(page.getByText(/Run run-ui-001 · running/)).toBeVisible();
   await expect(page.getByText(/#1 trip_start · applied/)).toBeVisible();
+  await expect(page.getByText(/Assignment: Completed/)).toBeVisible();
+  await expect(page.getByText(/Trip: In Progress/)).toBeVisible();
+  await expect(page.locator('#sim-requests')).toBeDisabled();
   await page.screenshot({ path: testInfo.outputPath('simulation-running.png'), fullPage: true });
   expect(postCount).toBe(1);
   expect(peakPositionReads).toBeLessThanOrEqual(4);
+  await page.getByLabel('Vehicle on map').selectOption('vehicle-002');
+  await expect(page.locator('.leaflet-overlay-pane .simulation-vehicle-marker')).toHaveCount(1);
+  await expect(page.locator('#sim-vehicle-detail')).toContainText('vehicle-002:');
+  await page.getByLabel('Vehicle on map').selectOption('vehicle-001');
+  await expect(page.locator('.leaflet-overlay-pane .simulation-vehicle-marker')).toHaveCount(1);
+  await expect(page.locator('#sim-vehicle-detail')).toContainText('vehicle-001:');
+  await page.reload();
+  await expect(page.getByText(/Run run-ui-001 · running/)).toBeVisible();
+  await expect(page.getByText(/#1 trip_start · applied/)).toBeVisible();
+  await expect(page.getByLabel('Vehicle on map')).toHaveValue('vehicle-001');
+  expect(postCount).toBe(1);
+  expect(runReadCount).toBeGreaterThan(0);
   await page.getByRole('button', { name: 'Stop and drain' }).click();
   await expect.poll(() => stopCount).toBe(1);
+  await expect(page.locator('#sim-summary')).toContainText('incomplete 1 trips / 1 requests / 2 events');
+  await expect(page.locator('#sim-summary')).toContainText('Requested Stop');
+  await page.reload();
+  await expect(page.locator('#sim-summary')).toContainText('incomplete 1 trips / 1 requests / 2 events');
+  await expect(page.getByText(/Assignment: Completed/)).toBeVisible();
+  await expect(page.locator('#sim-requests')).toBeEnabled();
+  await page.locator('.sim-trip-card').click();
+  await expect(page.getByLabel('Vehicle on map')).toHaveValue('vehicle-001');
+});
+
+test('completed run restores trip, selected vehicle and textual last-known age', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.route('https://tile.openstreetmap.org/**', route => route.abort());
+  await page.route('**/fleet-api/**', route => route.fulfill({ json: { items: [], next_cursor: null, as_of: new Date().toISOString() } }));
+  await page.route('**/ride-api/**', route => route.fulfill({ json: { items: [], next_cursor: null, as_of: new Date().toISOString() } }));
+  const now = new Date().toISOString();
+  const routeFixture = { route_id: 'lansdowne-centretown-v1', route_version: 1, start_zone: 'lansdowne', end_zone: 'centretown', duration_seconds: 8, points: Array.from({ length: 21 }, (_, i) => ({ latitude: 45.3995 + i * 0.001, longitude: -75.6823 - i * 0.0005 })) };
+  await page.addInitScript(() => localStorage.setItem('ottawa-fleet.simulation-run-id', 'run-terminal'));
+  await page.route('**/simulation-api/v2/simulation/runs/run-terminal', route => route.fulfill({ json: { run_id: 'run-terminal', state: 'completed', manifest: { request_count: 1, event_rate_per_second: 1, duration_seconds: 30, max_in_flight: 1 }, created_at: now, deadline_at: now, completed_at: now, terminal_reason: 'all_events_complete', incomplete_trips: 0, incomplete_requests: 0, incomplete_events: 0, issued_events: 2, completed_events: 2, version: 3 } }));
+  await page.route('**/simulation-api/v2/simulation/runs/run-terminal/events**', route => route.fulfill({ json: { items: [{ event_id: 'event-terminal-start', sequence: 1, kind: 'trip_start', result: 'applied', scheduled_at: now, ride_id: 'ride-terminal', trip_id: 'trip-terminal', vehicle_id: 'vehicle-001' }, { event_id: 'event-terminal-complete', sequence: 2, kind: 'trip_complete', result: 'applied', scheduled_at: now, ride_id: 'ride-terminal', trip_id: 'trip-terminal', vehicle_id: 'vehicle-001' }], next_cursor: null } }));
+  await page.route('**/simulation-api/v2/simulation/routes/**', route => route.fulfill({ json: routeFixture }));
+  await page.route('**/ride-api/v2/rides/ride-terminal/trip', route => route.fulfill({ json: { ride_id: 'ride-terminal', assignment_state: 'completed', trip_state: 'completed', trip_id: 'trip-terminal', vehicle_id: 'vehicle-001', updated_at: now, version: 3 } }));
+  await page.route('**/fleet-api/v1/fleet?limit=20', route => route.fulfill({ json: { items: [{ vehicle_id: 'vehicle-001' }, { vehicle_id: 'vehicle-002' }], next_cursor: null, as_of: now } }));
+  let positionCalls = 0;
+  await page.route('**/fleet-api/v2/fleet/vehicles/*/position', route => {
+    positionCalls += 1;
+    if (route.request().url().includes('vehicle-002')) return route.abort();
+    return route.fulfill({ json: { vehicle_id: 'vehicle-001', position: { latitude: 45.3995, longitude: -75.6823 }, observed_at: '2026-10-03T12:00:00Z', as_of: '2026-10-03T12:00:00Z', freshness: 'fresh', operational_state: 'available', vehicle_version: 4 } });
+  });
+  await page.route('**/ride-api/v1/rides**', route => route.fulfill({ json: { items: [{ ride_id: 'ride-terminal', pickup_zone: 'lansdowne', dropoff_zone: 'centretown', passengers: 1, state: 'completed', vehicle_id: 'vehicle-001', created_at: now, updated_at: now }], next_cursor: null, as_of: now } }));
+  await page.goto('/');
+  await expect(page.locator('#sim-summary')).toContainText('completed');
+  await expect(page.locator('#sim-summary')).toContainText('All Events Complete');
+  await expect(page.locator('#sim-summary')).toContainText('1 planned requests');
+  await expect(page.locator('#sim-summary')).toContainText('incomplete 0 trips / 0 requests / 0 events');
+  await expect(page.getByText(/Trip: Completed/)).toBeVisible();
+  await expect(page.locator('#sim-vehicle-detail')).toContainText('Last known');
+  await expect.poll(() => positionCalls).toBeGreaterThan(0);
+  await expect(page.getByRole('button', { name: /Select ride-terminal trip and vehicle/ })).toBeVisible();
+  await page.getByRole('button', { name: /Select ride-terminal trip and vehicle/ }).click();
+  await expect(page.getByLabel('Vehicle on map')).toHaveValue('vehicle-001');
+  await expect(page.locator('.leaflet-overlay-pane .simulation-vehicle-marker')).toHaveCount(1);
+  await page.reload();
+  await expect(page.locator('#sim-summary')).toContainText('completed');
+  await expect(page.getByText(/Trip: Completed/)).toBeVisible();
+  await expect(page.getByLabel('Vehicle on map')).toHaveValue('vehicle-001');
+  await expect(page.locator('.leaflet-overlay-pane .simulation-vehicle-marker')).toHaveCount(1);
+});
+
+test('uncertain run creation retries the exact pending manifest and idempotency key', async ({ page }) => {
+  await page.route('https://tile.openstreetmap.org/**', route => route.abort());
+  await page.route('**/fleet-api/**', route => route.fulfill({ json: { items: [], next_cursor: null, as_of: new Date().toISOString() } }));
+  await page.route('**/ride-api/**', route => route.fulfill({ json: { items: [], next_cursor: null, as_of: new Date().toISOString() } }));
+  const now = new Date().toISOString();
+  const acceptedRun = { run_id: 'run-reconciled', state: 'running', manifest: {}, created_at: now, deadline_at: now, issued_events: 0, completed_events: 0, version: 1 };
+  let postCount = 0;
+  const submitted: unknown[] = [];
+  await page.route('**/simulation-api/v2/simulation/routes/**', route => route.fulfill({ json: { route_id: 'lansdowne-centretown-v1', route_version: 1, start_zone: 'lansdowne', end_zone: 'centretown', duration_seconds: 8, points: [{ latitude: 45.3995, longitude: -75.6823 }, { latitude: 45.4148, longitude: -75.6984 }] } }));
+  await page.route('**/simulation-api/v2/simulation/runs', async route => {
+    submitted.push(route.request().postDataJSON());
+    postCount += 1;
+    if (postCount === 1) return route.abort();
+    return route.fulfill({ json: acceptedRun });
+  });
+  await page.route('**/simulation-api/v2/simulation/runs/run-reconciled', route => route.fulfill({ json: acceptedRun }));
+  await page.route('**/simulation-api/v2/simulation/runs/run-reconciled/events**', route => route.fulfill({ json: { items: [], next_cursor: null } }));
+  await page.route('**/fleet-api/v1/fleet?limit=20', route => route.fulfill({ json: { items: [], next_cursor: null, as_of: now } }));
+  await page.goto('/');
+  await page.getByLabel(/Start an opt-in synthetic run/).check();
+  await page.getByRole('button', { name: 'Start scenario' }).click();
+  await expect(page.getByText(/Start response is uncertain/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry same scenario start' })).toBeEnabled();
+  await expect(page.locator('#sim-requests')).toBeDisabled();
+  await page.getByRole('button', { name: 'Retry same scenario start' }).click();
+  await expect(page.getByText(/Run run-reconciled · running/)).toBeVisible();
+  expect(postCount).toBe(2);
+  expect(submitted[1]).toEqual(submitted[0]);
+  expect((submitted[1] as { manifest: { idempotency_key: string } }).manifest.idempotency_key).toBeTruthy();
+});
+
+test('accepting a different run replaces its trip and vehicle snapshot', async ({ page }) => {
+  await page.route('https://tile.openstreetmap.org/**', route => route.abort());
+  await page.route('**/fleet-api/**', route => route.fulfill({ json: { items: [], next_cursor: null, as_of: new Date().toISOString() } }));
+  await page.route('**/ride-api/**', route => route.fulfill({ json: { items: [], next_cursor: null, as_of: new Date().toISOString() } }));
+  const now = new Date().toISOString();
+  const oldRun = { run_id: 'run-old', state: 'completed', manifest: { request_count: 1 }, created_at: now, deadline_at: now, completed_at: now, terminal_reason: 'all_events_complete', incomplete_trips: 0, incomplete_requests: 0, incomplete_events: 0, issued_events: 2, completed_events: 2, version: 2 };
+  const newRun = { run_id: 'run-new', state: 'running', manifest: { request_count: 1 }, created_at: now, deadline_at: now, issued_events: 0, completed_events: 0, version: 1 };
+  await page.addInitScript(() => localStorage.setItem('ottawa-fleet.simulation-run-id', 'run-old'));
+  await page.route('**/simulation-api/v2/simulation/routes/**', route => route.fulfill({ json: { route_id: 'lansdowne-centretown-v1', route_version: 1, start_zone: 'lansdowne', end_zone: 'centretown', duration_seconds: 8, points: [{ latitude: 45.3995, longitude: -75.6823 }, { latitude: 45.4148, longitude: -75.6984 }] } }));
+  await page.route('**/simulation-api/v2/simulation/runs/run-old', route => route.fulfill({ json: oldRun }));
+  await page.route('**/simulation-api/v2/simulation/runs/run-old/events**', route => route.fulfill({ json: { items: [{ event_id: 'old-start', sequence: 1, kind: 'trip_start', result: 'applied', scheduled_at: now, ride_id: 'ride-old', trip_id: 'trip-old', vehicle_id: 'vehicle-old' }], next_cursor: null } }));
+  await page.route('**/ride-api/v2/rides/ride-old/trip', route => route.fulfill({ json: { ride_id: 'ride-old', assignment_state: 'completed', trip_state: 'completed', trip_id: 'trip-old', vehicle_id: 'vehicle-old', updated_at: now, version: 3 } }));
+  await page.route('**/simulation-api/v2/simulation/runs', route => route.fulfill({ json: newRun }));
+  await page.route('**/simulation-api/v2/simulation/runs/run-new', route => route.fulfill({ json: newRun }));
+  await page.route('**/simulation-api/v2/simulation/runs/run-new/events**', route => route.fulfill({ json: { items: [], next_cursor: null } }));
+  let inventoryCall = 0;
+  await page.route('**/fleet-api/v1/fleet?limit=20', route => {
+    inventoryCall += 1;
+    const vehicle = inventoryCall === 1 ? 'vehicle-old' : 'vehicle-new';
+    return route.fulfill({ json: { items: [{ vehicle_id: vehicle }], next_cursor: null, as_of: now } });
+  });
+  await page.route('**/fleet-api/v2/fleet/vehicles/*/position', route => {
+    const vehicle = route.request().url().split('/').at(-2)!;
+    return route.fulfill({ json: { vehicle_id: vehicle, position: { latitude: vehicle === 'vehicle-old' ? 45.3995 : 45.4148, longitude: -75.6823 }, observed_at: now, as_of: now, freshness: 'fresh', operational_state: 'available', vehicle_version: 1 } });
+  });
+  await page.goto('/');
+  await expect(page.locator('.sim-trip-card[data-ride-id="ride-old"]')).toBeVisible();
+  await page.getByLabel(/Start an opt-in synthetic run/).check();
+  await page.getByRole('button', { name: 'Start scenario' }).click();
+  await expect(page.getByText(/Run run-new · running/)).toBeVisible();
+  await expect(page.locator('.sim-trip-card')).toHaveCount(0);
+  await expect(page.getByLabel('Vehicle on map')).toContainText('vehicle-new');
+  await expect(page.getByLabel('Vehicle on map')).not.toContainText('vehicle-old');
+  await expect(page.getByText(/old-start/)).toHaveCount(0);
 });
 

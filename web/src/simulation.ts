@@ -8,8 +8,9 @@ export type Position = {
   route_id?: typeof ROUTE_ID; route_version?: 1; route_segment?: number; segment_start?: Point; segment_end?: Point;
   segment_started_at?: string; segment_ends_at?: string;
 };
-export type Run = { run_id: string; state: string; manifest: Record<string, unknown>; created_at: string; deadline_at: string; issued_events: number; completed_events: number; version: number };
-export type SimulationEvent = { event_id: string; sequence: number; kind: string; result: string; scheduled_at: string; issued_at?: string };
+export type Run = { run_id: string; state: string; manifest: Record<string, unknown>; created_at: string; deadline_at: string; completed_at?: string; terminal_reason?: string; incomplete_trips?: number; incomplete_requests?: number; incomplete_events?: number; issued_events: number; completed_events: number; version: number };
+export type SimulationEvent = { event_id: string; sequence: number; kind: string; result: string; scheduled_at: string; issued_at?: string; ride_id?: string; trip_id?: string; vehicle_id?: string };
+export type Trip = { ride_id: string; assignment_state: 'queued' | 'processing' | 'completed' | 'failed'; trip_state: 'not_started' | 'in_progress' | 'completed' | 'cancelled'; trip_id?: string; vehicle_id?: string; start_zone?: string; destination_zone?: string; started_at?: string; completed_at?: string; updated_at: string; version: number };
 export type ScenarioSettings = { requestCount: number; rate: number; durationSeconds: number; concurrency: number; seed: number };
 
 export function scenarioManifest(settings: ScenarioSettings, key: string) {
@@ -40,7 +41,7 @@ const SIM = '/simulation-api/v2/simulation';
 export const getRoute = (fetcher: typeof fetch = fetch) => json<Route>(`${SIM}/routes/${ROUTE_ID}`, undefined, fetcher);
 export const createRun = (manifest: ReturnType<typeof scenarioManifest>, fetcher: typeof fetch = fetch) => json<Run>(`${SIM}/runs`, { method: 'POST', body: JSON.stringify({ manifest }) }, fetcher);
 export const getRun = (id: string, fetcher: typeof fetch = fetch) => json<Run>(`${SIM}/runs/${encodeURIComponent(id)}`, undefined, fetcher);
-export const getRunEvents = (id: string, fetcher: typeof fetch = fetch) => json<{ items: SimulationEvent[]; next_cursor: string | null }>(`${SIM}/runs/${encodeURIComponent(id)}/events?limit=20`, undefined, fetcher);
+export const getRunEvents = (id: string, cursor?: string | null, fetcher: typeof fetch = fetch) => json<{ items: SimulationEvent[]; next_cursor: string | null }>(`${SIM}/runs/${encodeURIComponent(id)}/events?limit=20${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, undefined, fetcher);
 export const stopRun = (id: string, fetcher: typeof fetch = fetch) => json<Run>(`${SIM}/runs/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ drain: true }) }, fetcher);
 export type FleetVehicle = { vehicle_id: string };
 export async function getVehicles(fetcher: typeof fetch = fetch): Promise<string[]> {
@@ -48,6 +49,7 @@ export async function getVehicles(fetcher: typeof fetch = fetch): Promise<string
   return response.items.slice(0, SIMULATION_LIMITS.vehicles).map(item => item.vehicle_id);
 }
 export const getPosition = (id: string, fetcher: typeof fetch = fetch) => json<Position>(`/fleet-api/v2/fleet/vehicles/${encodeURIComponent(id)}/position`, undefined, fetcher);
+export const getTrip = (id: string, fetcher: typeof fetch = fetch) => json<Trip>(`/ride-api/v2/rides/${encodeURIComponent(id)}/trip`, undefined, fetcher);
 
 export function interpolatePosition(position: Position, now = Date.now()): Point {
   const asOf = Date.parse(position.as_of);
