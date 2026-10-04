@@ -9,10 +9,12 @@ recovery without external accounts or infrastructure.
 migrations, assignment worker, TypeScript operator UI, bounded scenario CLI,
 Dockerfiles, local Compose, and application CI. Follow
 [local development](docs/local-development.md) to start and validate the stack.
-Release [v0.1.0](https://github.com/ANISHG-26/ottawa-fleet-app/releases/tag/v0.1.0)
+Tagged build [v0.1.0](https://github.com/ANISHG-26/ottawa-fleet-app/tree/v0.1.0)
 was built from reviewed source commit `f485682`. Its [trusted workflow run](https://github.com/ANISHG-26/ottawa-fleet-app/actions/runs/37131621545)
 published six immutable GHCR images and packaged the Helm chart as an Actions
-artifact. Local Compose acceptance remains open under application issues [#4](https://github.com/ANISHG-26/ottawa-fleet-app/issues/4)
+artifact. The current chart source is `0.1.1`; see
+[published build versus current source](docs/releases.md#published-build-and-current-source)
+before selecting artifacts. Local Compose acceptance remains open under application issues [#4](https://github.com/ANISHG-26/ottawa-fleet-app/issues/4)
 and [#9](https://github.com/ANISHG-26/ottawa-fleet-app/issues/9); installed Helm
 acceptance remains open under [#11](https://github.com/ANISHG-26/ottawa-fleet-app/issues/11).
 Platform measurement and the GCP lab remain separate acceptance work tracked by
