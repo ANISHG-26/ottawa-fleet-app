@@ -6,6 +6,8 @@ contract is this document plus [OpenAPI 3.1](v1/openapi.json) and the
 [Examples](v1/fixtures.json) contain synthetic positive and negative cases.
 [Freshness examples](v1/freshness.json) exercise the clock boundary and future observations.
 These files describe future behavior; no HTTP service or database is implemented.
+The additive [v2 simulation, trip, and run contract](v2/README.md) is maintained
+independently and does not change these v1 meanings or generated files.
 
 ## Validation and changes
 

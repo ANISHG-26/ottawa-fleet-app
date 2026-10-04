@@ -1,0 +1,802 @@
+[
+  {
+    "name": "AssignmentState representative valid",
+    "schema": "AssignmentState",
+    "valid": true,
+    "value": "queued"
+  },
+  {
+    "name": "AssignmentState rejects invalid fixture",
+    "schema": "AssignmentState",
+    "valid": false,
+    "value": "invalid-fixture-value"
+  },
+  {
+    "name": "TripState representative valid",
+    "schema": "TripState",
+    "valid": true,
+    "value": "not_started"
+  },
+  {
+    "name": "TripState rejects invalid fixture",
+    "schema": "TripState",
+    "valid": false,
+    "value": "invalid-fixture-value"
+  },
+  {
+    "name": "RunState representative valid",
+    "schema": "RunState",
+    "valid": true,
+    "value": "scheduled"
+  },
+  {
+    "name": "RunState rejects invalid fixture",
+    "schema": "RunState",
+    "valid": false,
+    "value": "invalid-fixture-value"
+  },
+  {
+    "name": "VehicleOperationalState representative valid",
+    "schema": "VehicleOperationalState",
+    "valid": true,
+    "value": "available"
+  },
+  {
+    "name": "VehicleOperationalState rejects invalid fixture",
+    "schema": "VehicleOperationalState",
+    "valid": false,
+    "value": "invalid-fixture-value"
+  },
+  {
+    "name": "Position representative valid",
+    "schema": "Position",
+    "valid": true,
+    "value": {
+      "vehicle_id": "vehicle-001",
+      "position": {
+        "latitude": 45.0,
+        "longitude": -76.0
+      },
+      "observed_at": "2026-10-03T12:00:00Z",
+      "as_of": "2026-10-03T12:00:00Z",
+      "freshness": "fresh",
+      "operational_state": "available",
+      "vehicle_version": 1
+    }
+  },
+  {
+    "name": "Position rejects invalid fixture",
+    "schema": "Position",
+    "valid": false,
+    "value": {
+      "vehicle_id": "vehicle-001",
+      "position": {
+        "latitude": 45.0,
+        "longitude": -76.0
+      },
+      "observed_at": "2026-10-03T12:00:00Z",
+      "as_of": "2026-10-03T12:00:00Z",
+      "freshness": "fresh",
+      "operational_state": "available",
+      "vehicle_version": 1,
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "RunManifest representative valid",
+    "schema": "RunManifest",
+    "valid": true,
+    "value": {
+      "scenario_id": "route20synthetic",
+      "fleet_profile": "default-six",
+      "idempotency_key": "vehicle-001",
+      "event_rate_per_second": 1,
+      "request_count": 1,
+      "execution_event_count": 1,
+      "duration_seconds": 1,
+      "max_in_flight": 1,
+      "route_duration_seconds": 8,
+      "route_id": "lansdowne-centretown-v1",
+      "start_zone": "lansdowne",
+      "end_zone": "centretown",
+      "seed": 1
+    }
+  },
+  {
+    "name": "RunManifest rejects invalid fixture",
+    "schema": "RunManifest",
+    "valid": false,
+    "value": {
+      "scenario_id": "route20synthetic",
+      "fleet_profile": "default-six",
+      "idempotency_key": "vehicle-001",
+      "event_rate_per_second": 1,
+      "request_count": 1,
+      "execution_event_count": 1,
+      "duration_seconds": 1,
+      "max_in_flight": 1,
+      "route_duration_seconds": 8,
+      "route_id": "lansdowne-centretown-v1",
+      "start_zone": "lansdowne",
+      "end_zone": "centretown",
+      "seed": 1,
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "Run representative valid",
+    "schema": "Run",
+    "valid": true,
+    "value": {
+      "run_id": "vehicle-001",
+      "state": "scheduled",
+      "manifest": {
+        "scenario_id": "route20synthetic",
+        "fleet_profile": "default-six",
+        "idempotency_key": "vehicle-001",
+        "event_rate_per_second": 1,
+        "request_count": 1,
+        "execution_event_count": 1,
+        "duration_seconds": 1,
+        "max_in_flight": 1,
+        "route_duration_seconds": 8,
+        "route_id": "lansdowne-centretown-v1",
+        "start_zone": "lansdowne",
+        "end_zone": "centretown",
+        "seed": 1
+      },
+      "created_at": "2026-10-03T12:00:00Z",
+      "deadline_at": "2026-10-03T12:00:00Z",
+      "drain_deadline_at": "2026-10-03T12:00:00Z",
+      "issued_events": 1,
+      "completed_events": 1,
+      "incomplete_trips": 1,
+      "incomplete_requests": 1,
+      "incomplete_events": 1,
+      "version": 1
+    }
+  },
+  {
+    "name": "Run rejects invalid fixture",
+    "schema": "Run",
+    "valid": false,
+    "value": {
+      "run_id": "vehicle-001",
+      "state": "scheduled",
+      "manifest": {
+        "scenario_id": "route20synthetic",
+        "fleet_profile": "default-six",
+        "idempotency_key": "vehicle-001",
+        "event_rate_per_second": 1,
+        "request_count": 1,
+        "execution_event_count": 1,
+        "duration_seconds": 1,
+        "max_in_flight": 1,
+        "route_duration_seconds": 8,
+        "route_id": "lansdowne-centretown-v1",
+        "start_zone": "lansdowne",
+        "end_zone": "centretown",
+        "seed": 1
+      },
+      "created_at": "2026-10-03T12:00:00Z",
+      "deadline_at": "2026-10-03T12:00:00Z",
+      "drain_deadline_at": "2026-10-03T12:00:00Z",
+      "issued_events": 1,
+      "completed_events": 1,
+      "incomplete_trips": 1,
+      "incomplete_requests": 1,
+      "incomplete_events": 1,
+      "version": 1,
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "Trip representative valid",
+    "schema": "Trip",
+    "valid": true,
+    "value": {
+      "ride_id": "vehicle-001",
+      "assignment_state": "queued",
+      "trip_state": "not_started",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "version": 1
+    }
+  },
+  {
+    "name": "Trip rejects invalid fixture",
+    "schema": "Trip",
+    "valid": false,
+    "value": {
+      "ride_id": "vehicle-001",
+      "assignment_state": "queued",
+      "trip_state": "not_started",
+      "updated_at": "2026-10-03T12:00:00Z",
+      "version": 1,
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "SimulationEvent representative valid",
+    "schema": "SimulationEvent",
+    "valid": true,
+    "value": {
+      "event_id": "vehicle-001",
+      "run_id": "vehicle-001",
+      "sequence": 1,
+      "kind": "trip_start",
+      "scheduled_at": "2026-10-03T12:00:00Z",
+      "result": "pending"
+    }
+  },
+  {
+    "name": "SimulationEvent rejects invalid fixture",
+    "schema": "SimulationEvent",
+    "valid": false,
+    "value": {
+      "event_id": "vehicle-001",
+      "run_id": "vehicle-001",
+      "sequence": 1,
+      "kind": "trip_start",
+      "scheduled_at": "2026-10-03T12:00:00Z",
+      "result": "pending",
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "CreateRunRequest representative valid",
+    "schema": "CreateRunRequest",
+    "valid": true,
+    "value": {
+      "manifest": {
+        "scenario_id": "route20synthetic",
+        "fleet_profile": "default-six",
+        "idempotency_key": "vehicle-001",
+        "event_rate_per_second": 1,
+        "request_count": 1,
+        "execution_event_count": 1,
+        "duration_seconds": 1,
+        "max_in_flight": 1,
+        "route_duration_seconds": 8,
+        "route_id": "lansdowne-centretown-v1",
+        "start_zone": "lansdowne",
+        "end_zone": "centretown",
+        "seed": 1
+      }
+    }
+  },
+  {
+    "name": "CreateRunRequest rejects invalid fixture",
+    "schema": "CreateRunRequest",
+    "valid": false,
+    "value": {
+      "manifest": {
+        "scenario_id": "route20synthetic",
+        "fleet_profile": "default-six",
+        "idempotency_key": "vehicle-001",
+        "event_rate_per_second": 1,
+        "request_count": 1,
+        "execution_event_count": 1,
+        "duration_seconds": 1,
+        "max_in_flight": 1,
+        "route_duration_seconds": 8,
+        "route_id": "lansdowne-centretown-v1",
+        "start_zone": "lansdowne",
+        "end_zone": "centretown",
+        "seed": 1
+      },
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "StopRunRequest representative valid",
+    "schema": "StopRunRequest",
+    "valid": true,
+    "value": {
+      "drain": true
+    }
+  },
+  {
+    "name": "StopRunRequest rejects invalid fixture",
+    "schema": "StopRunRequest",
+    "valid": false,
+    "value": {
+      "drain": true,
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "Error representative valid",
+    "schema": "Error",
+    "valid": true,
+    "value": {
+      "code": "invalid_request",
+      "message": "vehicle-001",
+      "request_id": "vehicle-001"
+    }
+  },
+  {
+    "name": "Error rejects invalid fixture",
+    "schema": "Error",
+    "valid": false,
+    "value": {
+      "code": "invalid_request",
+      "message": "vehicle-001",
+      "request_id": "vehicle-001",
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "FleetEffectReceipt representative valid",
+    "schema": "FleetEffectReceipt",
+    "valid": true,
+    "value": {
+      "event_id": "vehicle-001",
+      "effect": "trip_start",
+      "run_id": "vehicle-001",
+      "ride_id": "vehicle-001",
+      "trip_id": "vehicle-001",
+      "vehicle_id": "vehicle-001",
+      "reservation_id": "vehicle-001",
+      "payload_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "accepted_vehicle_version": 1,
+      "stored_at": "2026-10-03T12:00:00Z",
+      "result": "applied"
+    }
+  },
+  {
+    "name": "FleetEffectReceipt rejects invalid fixture",
+    "schema": "FleetEffectReceipt",
+    "valid": false,
+    "value": {
+      "event_id": "vehicle-001",
+      "effect": "trip_start",
+      "run_id": "vehicle-001",
+      "ride_id": "vehicle-001",
+      "trip_id": "vehicle-001",
+      "vehicle_id": "vehicle-001",
+      "reservation_id": "vehicle-001",
+      "payload_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "accepted_vehicle_version": 1,
+      "stored_at": "2026-10-03T12:00:00Z",
+      "result": "applied",
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "Route representative valid",
+    "schema": "Route",
+    "valid": true,
+    "value": {
+      "route_id": "lansdowne-centretown-v1",
+      "route_version": 1,
+      "start_zone": "lansdowne",
+      "end_zone": "centretown",
+      "duration_seconds": 8,
+      "points": [
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        }
+      ]
+    }
+  },
+  {
+    "name": "Route rejects invalid fixture",
+    "schema": "Route",
+    "valid": false,
+    "value": {
+      "route_id": "lansdowne-centretown-v1",
+      "route_version": 1,
+      "start_zone": "lansdowne",
+      "end_zone": "centretown",
+      "duration_seconds": 8,
+      "points": [
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        },
+        {
+          "latitude": 45.0,
+          "longitude": -76.0
+        }
+      ],
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "TripCommand representative valid",
+    "schema": "TripCommand",
+    "valid": true,
+    "value": {
+      "event_id": "vehicle-001",
+      "trip_id": "vehicle-001",
+      "vehicle_id": "vehicle-001",
+      "reservation_id": "vehicle-001",
+      "run_id": "vehicle-001",
+      "route_id": "lansdowne-centretown-v1",
+      "expected_trip_version": 1,
+      "expected_vehicle_version": 1
+    }
+  },
+  {
+    "name": "TripCommand rejects invalid fixture",
+    "schema": "TripCommand",
+    "valid": false,
+    "value": {
+      "event_id": "vehicle-001",
+      "trip_id": "vehicle-001",
+      "vehicle_id": "vehicle-001",
+      "reservation_id": "vehicle-001",
+      "run_id": "vehicle-001",
+      "route_id": "lansdowne-centretown-v1",
+      "expected_trip_version": 1,
+      "expected_vehicle_version": 1,
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "FleetStartTripCommand representative valid",
+    "schema": "FleetStartTripCommand",
+    "valid": true,
+    "value": {
+      "event_id": "vehicle-001",
+      "run_id": "vehicle-001",
+      "ride_id": "vehicle-001",
+      "trip_id": "vehicle-001",
+      "vehicle_id": "vehicle-001",
+      "reservation_id": "vehicle-001",
+      "route_id": "lansdowne-centretown-v1",
+      "expected_vehicle_version": 1
+    }
+  },
+  {
+    "name": "FleetStartTripCommand rejects invalid fixture",
+    "schema": "FleetStartTripCommand",
+    "valid": false,
+    "value": {
+      "event_id": "vehicle-001",
+      "run_id": "vehicle-001",
+      "ride_id": "vehicle-001",
+      "trip_id": "vehicle-001",
+      "vehicle_id": "vehicle-001",
+      "reservation_id": "vehicle-001",
+      "route_id": "lansdowne-centretown-v1",
+      "expected_vehicle_version": 1,
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "FleetCompleteTripCommand representative valid",
+    "schema": "FleetCompleteTripCommand",
+    "valid": true,
+    "value": {
+      "event_id": "vehicle-001",
+      "run_id": "vehicle-001",
+      "ride_id": "vehicle-001",
+      "trip_id": "vehicle-001",
+      "vehicle_id": "vehicle-001",
+      "reservation_id": "vehicle-001",
+      "route_id": "lansdowne-centretown-v1",
+      "expected_vehicle_version": 1,
+      "destination_zone": "centretown",
+      "destination_position": {
+        "latitude": 45.0,
+        "longitude": -76.0
+      }
+    }
+  },
+  {
+    "name": "FleetCompleteTripCommand rejects invalid fixture",
+    "schema": "FleetCompleteTripCommand",
+    "valid": false,
+    "value": {
+      "event_id": "vehicle-001",
+      "run_id": "vehicle-001",
+      "ride_id": "vehicle-001",
+      "trip_id": "vehicle-001",
+      "vehicle_id": "vehicle-001",
+      "reservation_id": "vehicle-001",
+      "route_id": "lansdowne-centretown-v1",
+      "expected_vehicle_version": 1,
+      "destination_zone": "centretown",
+      "destination_position": {
+        "latitude": 45.0,
+        "longitude": -76.0
+      },
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "PositionCommand representative valid",
+    "schema": "PositionCommand",
+    "valid": true,
+    "value": {
+      "event_id": "vehicle-001",
+      "run_id": "vehicle-001",
+      "trip_id": "vehicle-001",
+      "route_id": "lansdowne-centretown-v1",
+      "expected_vehicle_version": 1,
+      "position": {
+        "latitude": 45.0,
+        "longitude": -76.0
+      },
+      "route_segment": 1
+    }
+  },
+  {
+    "name": "PositionCommand rejects invalid fixture",
+    "schema": "PositionCommand",
+    "valid": false,
+    "value": {
+      "event_id": "vehicle-001",
+      "run_id": "vehicle-001",
+      "trip_id": "vehicle-001",
+      "route_id": "lansdowne-centretown-v1",
+      "expected_vehicle_version": 1,
+      "position": {
+        "latitude": 45.0,
+        "longitude": -76.0
+      },
+      "route_segment": 1,
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "RunPage representative valid",
+    "schema": "RunPage",
+    "valid": true,
+    "value": {
+      "items": [],
+      "next_cursor": "vehicle-001"
+    }
+  },
+  {
+    "name": "RunPage rejects invalid fixture",
+    "schema": "RunPage",
+    "valid": false,
+    "value": {
+      "items": [],
+      "next_cursor": "vehicle-001",
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "EventPage representative valid",
+    "schema": "EventPage",
+    "valid": true,
+    "value": {
+      "items": [],
+      "next_cursor": "vehicle-001"
+    }
+  },
+  {
+    "name": "EventPage rejects invalid fixture",
+    "schema": "EventPage",
+    "valid": false,
+    "value": {
+      "items": [],
+      "next_cursor": "vehicle-001",
+      "unexpected_fixture_field": true
+    }
+  },
+  {
+    "name": "stationary vehicle has no route segment",
+    "schema": "Position",
+    "valid": true,
+    "value": {
+      "vehicle_id": "vehicle-001",
+      "position": {
+        "latitude": 45.399,
+        "longitude": -75.684
+      },
+      "observed_at": "2026-10-03T12:00:00Z",
+      "as_of": "2026-10-03T12:00:00Z",
+      "freshness": "fresh",
+      "operational_state": "available",
+      "vehicle_version": 1
+    }
+  },
+  {
+    "name": "moving vehicle has timed segment",
+    "schema": "Position",
+    "valid": true,
+    "value": {
+      "vehicle_id": "vehicle-001",
+      "position": {
+        "latitude": 45.399,
+        "longitude": -75.684
+      },
+      "observed_at": "2026-10-03T12:00:00Z",
+      "as_of": "2026-10-03T12:00:00Z",
+      "freshness": "fresh",
+      "operational_state": "on_trip",
+      "vehicle_version": 1,
+      "route_id": "lansdowne-centretown-v1",
+      "route_version": 1,
+      "route_segment": 0,
+      "segment_start": {
+        "latitude": 45.399,
+        "longitude": -75.684
+      },
+      "segment_end": {
+        "latitude": 45.40005,
+        "longitude": -75.68445
+      },
+      "segment_started_at": "2026-10-03T12:00:00Z",
+      "segment_ends_at": "2026-10-03T12:00:00.400Z"
+    }
+  },
+  {
+    "name": "moving vehicle missing segment is invalid",
+    "schema": "Position",
+    "valid": false,
+    "value": {
+      "vehicle_id": "vehicle-001",
+      "position": {
+        "latitude": 45.399,
+        "longitude": -75.684
+      },
+      "observed_at": "2026-10-03T12:00:00Z",
+      "as_of": "2026-10-03T12:00:00Z",
+      "freshness": "fresh",
+      "operational_state": "on_trip",
+      "vehicle_version": 1
+    }
+  }
+]

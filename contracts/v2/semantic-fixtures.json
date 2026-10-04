@@ -1,0 +1,296 @@
+[
+  {
+    "name": "valid bounded route manifest",
+    "kind": "manifest",
+    "expected": "accept",
+    "manifest": {
+      "scenario_id": "route20synthetic",
+      "fleet_profile": "route20synthetic",
+      "idempotency_key": "run_demo_001",
+      "event_rate_per_second": 2,
+      "request_count": 20,
+      "execution_event_count": 60,
+      "duration_seconds": 20,
+      "max_in_flight": 2,
+      "route_duration_seconds": 8,
+      "route_id": "lansdowne-centretown-v1",
+      "start_zone": "lansdowne",
+      "end_zone": "centretown",
+      "seed": 7
+    },
+    "stored_receipt": null,
+    "returned_receipt": null
+  },
+  {
+    "name": "manifest exceeds finite request bound",
+    "kind": "manifest",
+    "expected": "reject",
+    "manifest": {
+      "scenario_id": "route20synthetic",
+      "fleet_profile": "route20synthetic",
+      "idempotency_key": "run_demo_001",
+      "event_rate_per_second": 2,
+      "request_count": 21,
+      "execution_event_count": 60,
+      "duration_seconds": 20,
+      "max_in_flight": 2,
+      "route_duration_seconds": 8,
+      "route_id": "lansdowne-centretown-v1",
+      "start_zone": "lansdowne",
+      "end_zone": "centretown",
+      "seed": 7
+    },
+    "stored_receipt": null,
+    "returned_receipt": null
+  },
+  {
+    "name": "manifest exceeds execution event bound",
+    "kind": "manifest",
+    "expected": "reject",
+    "manifest": {
+      "scenario_id": "route20synthetic",
+      "fleet_profile": "route20synthetic",
+      "idempotency_key": "run_demo_001",
+      "event_rate_per_second": 2,
+      "request_count": 20,
+      "execution_event_count": 61,
+      "duration_seconds": 20,
+      "max_in_flight": 2,
+      "route_duration_seconds": 8,
+      "route_id": "lansdowne-centretown-v1",
+      "start_zone": "lansdowne",
+      "end_zone": "centretown",
+      "seed": 7
+    },
+    "stored_receipt": null,
+    "returned_receipt": null
+  },
+  {
+    "name": "same run replay",
+    "kind": "run_replay",
+    "expected": "replay",
+    "first": {
+      "scenario_id": "route20synthetic",
+      "fleet_profile": "route20synthetic",
+      "idempotency_key": "run_demo_001",
+      "event_rate_per_second": 2,
+      "request_count": 20,
+      "execution_event_count": 60,
+      "duration_seconds": 20,
+      "max_in_flight": 2,
+      "route_duration_seconds": 8,
+      "route_id": "lansdowne-centretown-v1",
+      "start_zone": "lansdowne",
+      "end_zone": "centretown",
+      "seed": 7
+    },
+    "replay": {
+      "scenario_id": "route20synthetic",
+      "fleet_profile": "route20synthetic",
+      "idempotency_key": "run_demo_001",
+      "event_rate_per_second": 2,
+      "request_count": 20,
+      "execution_event_count": 60,
+      "duration_seconds": 20,
+      "max_in_flight": 2,
+      "route_duration_seconds": 8,
+      "route_id": "lansdowne-centretown-v1",
+      "start_zone": "lansdowne",
+      "end_zone": "centretown",
+      "seed": 7
+    },
+    "stored_receipt": null,
+    "returned_receipt": null
+  },
+  {
+    "name": "conflicting run replay",
+    "kind": "run_replay",
+    "expected": "conflict",
+    "first": {
+      "scenario_id": "route20synthetic",
+      "fleet_profile": "route20synthetic",
+      "idempotency_key": "run_demo_001",
+      "event_rate_per_second": 2,
+      "request_count": 20,
+      "execution_event_count": 60,
+      "duration_seconds": 20,
+      "max_in_flight": 2,
+      "route_duration_seconds": 8,
+      "route_id": "lansdowne-centretown-v1",
+      "start_zone": "lansdowne",
+      "end_zone": "centretown",
+      "seed": 7
+    },
+    "replay": {
+      "scenario_id": "route20synthetic",
+      "fleet_profile": "route20synthetic",
+      "idempotency_key": "run_demo_001",
+      "event_rate_per_second": 2,
+      "request_count": 20,
+      "execution_event_count": 60,
+      "duration_seconds": 20,
+      "max_in_flight": 2,
+      "route_duration_seconds": 8,
+      "route_id": "lansdowne-centretown-v1",
+      "start_zone": "lansdowne",
+      "end_zone": "centretown",
+      "seed": 8
+    },
+    "stored_receipt": null,
+    "returned_receipt": null
+  },
+  {
+    "name": "duplicate event after vehicle version advances",
+    "kind": "fleet_effect",
+    "expected": "replay",
+    "event_id": "event-001",
+    "stored_payload": {
+      "trip_id": "trip-001",
+      "vehicle_id": "vehicle-001",
+      "expected_vehicle_version": 2
+    },
+    "replay_payload": {
+      "trip_id": "trip-001",
+      "vehicle_id": "vehicle-001",
+      "expected_vehicle_version": 2
+    },
+    "stored_receipt": {
+      "event_id": "event-001",
+      "effect": "trip_start",
+      "run_id": "run-demo-001",
+      "ride_id": "ride-001",
+      "trip_id": "trip-001",
+      "vehicle_id": "vehicle-001",
+      "reservation_id": "reservation-001",
+      "payload_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "accepted_vehicle_version": 3,
+      "stored_at": "2026-10-03T12:00:00Z",
+      "result": "applied"
+    },
+    "current_vehicle_version": 4,
+    "active_trip_id": "trip-002",
+    "returned_receipt": {
+      "event_id": "event-001",
+      "effect": "trip_start",
+      "run_id": "run-demo-001",
+      "ride_id": "ride-001",
+      "trip_id": "trip-001",
+      "vehicle_id": "vehicle-001",
+      "reservation_id": "reservation-001",
+      "payload_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "accepted_vehicle_version": 3,
+      "stored_at": "2026-10-03T12:00:00Z",
+      "result": "applied"
+    }
+  },
+  {
+    "name": "conflicting duplicate event payload",
+    "kind": "fleet_effect",
+    "expected": "conflict",
+    "event_id": "event-001",
+    "stored_payload": {
+      "trip_id": "trip-001",
+      "vehicle_id": "vehicle-001",
+      "expected_vehicle_version": 2
+    },
+    "replay_payload": {
+      "trip_id": "trip-001",
+      "vehicle_id": "vehicle-002",
+      "expected_vehicle_version": 4
+    },
+    "stored_receipt": {
+      "event_id": "event-001",
+      "effect": "trip_start",
+      "run_id": "run-demo-001",
+      "ride_id": "ride-001",
+      "trip_id": "trip-001",
+      "vehicle_id": "vehicle-001",
+      "reservation_id": "reservation-001",
+      "payload_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "accepted_vehicle_version": 3,
+      "stored_at": "2026-10-03T12:00:00Z",
+      "result": "applied"
+    },
+    "current_vehicle_version": 4,
+    "active_trip_id": "trip-002",
+    "returned_receipt": null
+  },
+  {
+    "name": "late unseen event fenced after later trip",
+    "kind": "fleet_effect",
+    "expected": "reject",
+    "event_id": "event-old-001",
+    "stored_payload": null,
+    "replay_payload": {
+      "trip_id": "trip-001",
+      "vehicle_id": "vehicle-001",
+      "expected_vehicle_version": 2
+    },
+    "stored_receipt": null,
+    "current_vehicle_version": 4,
+    "active_trip_id": "trip-002",
+    "returned_receipt": null
+  },
+  {
+    "name": "fresh position boundary",
+    "kind": "freshness",
+    "expected": "fresh",
+    "as_of": "2026-10-03T12:00:00Z",
+    "observed_at": "2026-10-03T11:59:30Z",
+    "stored_receipt": null,
+    "returned_receipt": null
+  },
+  {
+    "name": "stale position",
+    "kind": "freshness",
+    "expected": "stale",
+    "as_of": "2026-10-03T12:00:00Z",
+    "observed_at": "2026-10-03T11:59:29Z",
+    "stored_receipt": null,
+    "returned_receipt": null
+  },
+  {
+    "name": "future position",
+    "kind": "freshness",
+    "expected": "future",
+    "as_of": "2026-10-03T12:00:00Z",
+    "observed_at": "2026-10-03T12:00:01Z",
+    "stored_receipt": null,
+    "returned_receipt": null
+  },
+  {
+    "name": "stop drains issued events",
+    "kind": "stop",
+    "expected": "draining",
+    "state": "running",
+    "issued": 3,
+    "completed": 1,
+    "stored_receipt": null,
+    "returned_receipt": null
+  },
+  {
+    "name": "stop rejects new events",
+    "kind": "stop",
+    "expected": "closed",
+    "state": "stopping",
+    "issued": 3,
+    "completed": 3,
+    "stored_receipt": null,
+    "returned_receipt": null
+  },
+  {
+    "name": "drain deadline records unfinished trips",
+    "kind": "stop",
+    "expected": "stopped_unfinished",
+    "state": "stopping",
+    "issued": 6,
+    "completed": 5,
+    "drain_deadline_expired": true,
+    "terminal_state": "stopped",
+    "incomplete_trips": 1,
+    "incomplete_requests": 1,
+    "incomplete_events": 1,
+    "stored_receipt": null,
+    "returned_receipt": null
+  }
+]
