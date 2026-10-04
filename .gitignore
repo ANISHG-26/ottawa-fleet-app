@@ -38,3 +38,4 @@ deploy/.local-data/
 # Workspace-local Go caches
 .gocache/
 .gomodcache/
+.cache/

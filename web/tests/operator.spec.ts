@@ -107,3 +107,41 @@ test('unavailable fleet is not summarized as zero available vehicles', async ({ 
   await expect(byward).not.toContainText('0 available');
 });
 
+test('route simulation writes only after opt-in and bounds position polling', async ({ page }, testInfo) => {
+  await page.route('https://tile.openstreetmap.org/**', route => route.abort());
+  let postCount = 0, stopCount = 0, activePositionReads = 0, peakPositionReads = 0;
+  const now = new Date().toISOString();
+  const routeFixture = { route_id: 'lansdowne-centretown-v1', route_version: 1, start_zone: 'lansdowne', end_zone: 'centretown', duration_seconds: 8, points: Array.from({ length: 21 }, (_, i) => ({ latitude: 45.3995 + i * 0.001, longitude: -75.6823 - i * 0.0005 })) };
+  const runFixture = { run_id: 'run-ui-001', state: 'running', manifest: {}, created_at: now, deadline_at: now, issued_events: 1, completed_events: 0, version: 1 };
+  await page.route('**/simulation-api/v2/simulation/routes/**', route => route.fulfill({ json: routeFixture }));
+  await page.route('**/simulation-api/v2/simulation/runs/run-ui-001/events**', route => route.fulfill({ json: { items: [{ event_id: 'event-ui-001', sequence: 1, kind: 'trip_start', result: 'applied', scheduled_at: now }], next_cursor: null } }));
+  await page.route('**/simulation-api/v2/simulation/runs', route => {
+    postCount += 1; return route.fulfill({ json: runFixture });
+  });
+  await page.route('**/simulation-api/v2/simulation/runs/run-ui-001', route => {
+    if (route.request().method() === 'DELETE') { stopCount += 1; return route.fulfill({ json: { ...runFixture, state: 'stopping' } }); }
+    return route.fulfill({ json: runFixture });
+  });
+  await page.route('**/fleet-api/v1/fleet?limit=20', route => route.fulfill({ json: { items: Array.from({ length: 6 }, (_, i) => ({ vehicle_id: `vehicle-00${i + 1}` })), next_cursor: null, as_of: now } }));
+  await page.route('**/fleet-api/v2/fleet/vehicles/*/position', async route => {
+    activePositionReads += 1; peakPositionReads = Math.max(peakPositionReads, activePositionReads);
+    await new Promise(resolve => setTimeout(resolve, 15));
+    activePositionReads -= 1;
+    await route.fulfill({ json: { vehicle_id: 'vehicle-001', position: { latitude: 45.3995, longitude: -75.6823 }, observed_at: now, as_of: now, freshness: 'fresh', operational_state: 'available', vehicle_version: 1 } });
+  });
+  await page.goto('/');
+  const start = page.getByRole('button', { name: 'Start scenario' });
+  await expect(start).toBeDisabled();
+  expect(postCount).toBe(0);
+  await page.getByLabel(/Start an opt-in synthetic run/).check();
+  await expect(start).toBeEnabled();
+  await start.click();
+  await expect(page.getByText(/Run run-ui-001 · running/)).toBeVisible();
+  await expect(page.getByText(/#1 trip_start · applied/)).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('simulation-running.png'), fullPage: true });
+  expect(postCount).toBe(1);
+  expect(peakPositionReads).toBeLessThanOrEqual(4);
+  await page.getByRole('button', { name: 'Stop and drain' }).click();
+  await expect.poll(() => stopCount).toBe(1);
+});
+

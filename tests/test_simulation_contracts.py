@@ -9,6 +9,15 @@ ROOT = Path(__file__).resolve().parents[1] / "contracts" / "v2"
 
 
 class SimulationContractTests(unittest.TestCase):
+    def test_manifest_reserves_start_and_completion_for_every_request(self):
+        api = json.loads((ROOT / "openapi.json").read_text(encoding="utf-8"))
+        fixture = next(c["manifest"] for c in json.loads((ROOT / "semantic-fixtures.json").read_text()) if c["kind"] == "manifest" and c["expected"] == "accept")
+        validator = Draft202012Validator(api["components"]["schemas"]["RunManifest"])
+        for count in (1, 4, 20):
+            with self.subTest(count=count):
+                self.assertFalse(list(validator.iter_errors({**fixture, "request_count": count, "execution_event_count": count * 2})))
+                self.assertTrue(list(validator.iter_errors({**fixture, "request_count": count, "execution_event_count": count * 2 - 1})))
+
     def test_openapi_declares_distinct_trip_and_assignment_states(self):
         api = json.loads((ROOT / "openapi.json").read_text(encoding="utf-8"))
         schemas = api["components"]["schemas"]

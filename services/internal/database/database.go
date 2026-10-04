@@ -112,7 +112,11 @@ func ApplyMigrations(ctx context.Context, db *sql.DB, root string) (retErr error
 	if _, err := conn.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS app_schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())`); err != nil {
 		return fmt.Errorf("create migration ledger: %w", err)
 	}
-	for _, owner := range []string{"fleet", "ride"} {
+	owners := []string{"fleet", "ride"}
+	if info, statErr := os.Stat(filepath.Join(root, "simulation")); statErr == nil && info.IsDir() {
+		owners = append(owners, "simulation")
+	}
+	for _, owner := range owners {
 		files, err := filepath.Glob(filepath.Join(root, owner, "*.sql"))
 		if err != nil {
 			return err

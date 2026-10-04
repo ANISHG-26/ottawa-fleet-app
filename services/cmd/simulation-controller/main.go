@@ -10,21 +10,21 @@ import (
 	"time"
 
 	"github.com/ANISHG-26/ottawa-fleet-app/services/internal/database"
-	"github.com/ANISHG-26/ottawa-fleet-app/services/internal/ride"
+	"github.com/ANISHG-26/ottawa-fleet-app/services/internal/simulation"
 	"github.com/ANISHG-26/ottawa-fleet-app/services/internal/telemetry"
 )
 
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	logger, logFile, err := telemetry.NewLogger("ride-api")
+	logger, logFile, err := telemetry.NewLogger("simulation-controller")
 	if err != nil {
 		slog.Error("logger setup failed", "error", err)
 		os.Exit(1)
 	}
 	defer logFile.Close()
 	slog.SetDefault(logger)
-	telemetryRuntime, err := telemetry.Init(ctx, "ride-api")
+	telemetryRuntime, err := telemetry.Init(ctx, "simulation-controller")
 	if err != nil {
 		logger.Error("telemetry setup failed", "error", err)
 		os.Exit(1)
@@ -44,41 +44,30 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Close()
-	addr := env("HTTP_ADDR", ":8081")
-	api := &ride.API{Store: ride.NewStore(db), DB: db}
-	if fleetURL := os.Getenv("FLEET_API_URL"); fleetURL != "" {
-		api.Trips = ride.NewHTTPTripEffects(fleetURL)
-	}
-	server := newHTTPServer(addr, telemetry.HTTPMiddleware("ride-api")(api.Handler()), 10*time.Second, 10*time.Second)
+	controller := simulation.NewHandler(db, simulation.Config{Enabled: os.Getenv("SIMULATION_ENABLED") == "1", FleetURL: env("FLEET_API_URL", "http://localhost:8080"), RideURL: env("RIDE_API_URL", "http://localhost:8081")})
+	server := &http.Server{Addr: env("HTTP_ADDR", ":8083"), Handler: telemetry.HTTPMiddleware("simulation-controller")(controller.Handler()), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second}
+	workerErr := make(chan error, 1)
+	go func() { workerErr <- controller.RunWorker(ctx) }()
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- server.ListenAndServe() }()
-	logger.Info("ride api listening", "addr", addr)
+	logger.Info("simulation controller listening", "addr", server.Addr)
 	select {
 	case err = <-serveErr:
 		if err != http.ErrServerClosed {
-			logger.Error("http server stopped", "error", err)
-			os.Exit(1)
+			logger.Error("controller stopped", "error", err)
+			cancel()
 		}
+	case err = <-workerErr:
+		logger.Error("controller dispatcher stopped", "error", err)
+		cancel()
 	case <-ctx.Done():
 	}
-	shutdown, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancelShutdown()
+	shutdown, stop := context.WithTimeout(context.Background(), 10*time.Second)
+	defer stop()
 	if err := server.Shutdown(shutdown); err != nil {
-		logger.Error("http shutdown failed", "error", err)
+		logger.Warn("http shutdown failed", "error", err)
 	}
 }
-
-func newHTTPServer(addr string, handler http.Handler, readTimeout, writeTimeout time.Duration) *http.Server {
-	return &http.Server{
-		Addr:              addr,
-		Handler:           handler,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       readTimeout,
-		WriteTimeout:      writeTimeout,
-		IdleTimeout:       60 * time.Second,
-	}
-}
-
 func env(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value

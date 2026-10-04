@@ -72,6 +72,70 @@ including after an interrupted run. Return `FLEET_FAULT_CONTROL` to `0` and run
 faults. Ordinary service-to-service requests cannot reach the debug endpoint
 because their source address is not loopback.
 
+## Opt-in route simulation profile
+
+The simulation profile is a separate local Compose project with its own
+project-named PostgreSQL volume and bridge network. It seeds the synthetic
+`route20synthetic` fleet profile only when that new project's database is
+empty. It does not reset or convert an existing database. Keep the normal
+Phase 1 project running if desired; use different loopback ports for the
+simulation project when those defaults are occupied.
+
+From the repository root, set a project name and optional published ports, then
+start both Compose files:
+
+```powershell
+$env:SIMULATION_PROJECT_NAME = 'ottawa-fleet-simulation'
+$env:SIMULATION_FLEET_API_PORT = '18080'
+$env:SIMULATION_RIDE_API_PORT = '18081'
+$env:SIMULATION_API_PORT = '18083'
+$env:SIMULATION_WEB_PORT = '18088'
+docker compose --project-directory . -p $env:SIMULATION_PROJECT_NAME -f deploy/compose.yaml -f deploy/compose.simulation.yaml config --quiet
+docker compose --project-directory . -p $env:SIMULATION_PROJECT_NAME -f deploy/compose.yaml -f deploy/compose.simulation.yaml --profile simulation up --build -d
+docker compose --project-directory . -p $env:SIMULATION_PROJECT_NAME -f deploy/compose.yaml -f deploy/compose.simulation.yaml --profile simulation ps
+```
+
+The local endpoints are the operator UI at `http://localhost:18088`, Fleet at
+`http://localhost:18080`, Ride at `http://localhost:18081`, and the controller
+at `http://localhost:18083`. The browser reaches the controller through the
+same-origin `/simulation-api/` proxy. The simulation controls are opt-in; the
+route profile must be ready before a run is accepted. If readiness reports
+`profile_not_ready`, preserve that project's data and start a new isolated
+project name with a fresh volume rather than resetting the existing one.
+
+In the UI, enable the opt-in checkbox, keep the request count, event rate,
+duration and concurrency within the displayed bounds, then start the pinned
+Lansdowne-to-Centretown scenario. The controller owns run scheduling and trip
+start/completion effects; each trip takes eight simulated seconds. Moving dots
+are rendered from Fleet position reads and stop interpolating when observations
+are stale or future-dated. The UI does not complete a ride from animation or
+send trip-completion writes. Use **Stop and drain** to prevent new work while
+accepted effects reconcile. Wait for the displayed run state and bounded event
+history to become terminal before stopping Compose.
+
+The create request is replay-safe. For a run ID shown by the UI, fetch its exact
+manifest and resubmit it unchanged (including its idempotency key); it should
+resolve to the same run ID:
+
+```powershell
+$runId = 'run-id-shown-in-the-ui'
+$run = Invoke-RestMethod "http://localhost:18083/v2/simulation/runs/$runId"
+$manifest = @{ manifest = $run.manifest } | ConvertTo-Json -Depth 8
+$replay = Invoke-RestMethod -Method Post -Uri 'http://localhost:18083/v2/simulation/runs' -ContentType 'application/json' -Body $manifest
+$replay.run_id
+Invoke-RestMethod "http://localhost:18083/v2/simulation/runs/$runId/events?limit=20"
+Invoke-RestMethod http://localhost:18083/readyz
+```
+
+Stop only this simulation project without deleting its persistent data:
+
+```powershell
+docker compose --project-directory . -p $env:SIMULATION_PROJECT_NAME -f deploy/compose.yaml -f deploy/compose.simulation.yaml --profile simulation down
+```
+
+The project-specific volume is retained for later inspection or restart. Do not
+add `--volumes` when stopping a run.
+
 ## Validation and local data reset
 
 Install the pinned contract validators once, then run the same checks as CI:

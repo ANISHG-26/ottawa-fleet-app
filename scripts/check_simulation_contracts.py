@@ -16,7 +16,7 @@ def outcome(case):
     if kind == "manifest":
         m = case["manifest"]
         valid = (1 <= m["event_rate_per_second"] <= 4 and 1 <= m["request_count"] <= 20
-                 and 1 <= m["execution_event_count"] <= 60
+                 and m["request_count"] * 2 <= m["execution_event_count"] <= 60
                  and 1 <= m["duration_seconds"] <= 60 and 1 <= m["max_in_flight"] <= 4
                  and m["route_duration_seconds"] == 8 and m["route_id"] == "lansdowne-centretown-v1" and m["start_zone"] == "lansdowne"
                  and m["end_zone"] == "centretown" and m["fleet_profile"] == m["scenario_id"])

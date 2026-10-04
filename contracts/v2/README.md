@@ -42,7 +42,10 @@ lifetime. The same normalized manifest returns the original run; changed setting
 conflict. At most one run may be scheduled, running, or stopping. A run cannot be
 edited after creation. Each manifest has at most 20 trip requests, 60 execution
 events (start, position, and completion), 4 scheduled events per second, 60 seconds,
-and 4 in flight. The route example `route20synthetic` is
+and 4 in flight. The event budget must reserve at least two events per request,
+so each accepted trip can start and complete. The local controller emits those
+two owner commands; position reads project Fleet's server-clock route without
+adding mutation events. The route example `route20synthetic` is
 opt-in and uses a separate 20-vehicle synthetic fleet profile; default seeding
 continues to produce the original six-vehicle fleet. Each route trip takes exactly
 8 simulated seconds from Lansdowne to Centretown. The manifest names route
@@ -69,7 +72,9 @@ clamps to the endpoints, and stops at the last observed point when stale.
 
 Ride trip commands carry event, run, route, ride, trip, vehicle and reservation IDs,
 plus separate `expected_trip_version` and `expected_vehicle_version`. Starting requires
-assignment completion and a current reservation matching all those IDs. Ride changes
+assignment completion and a current reservation matching all those IDs. The v1
+reservation primary key is the ride ID, so `reservation_id` must equal `ride_id`.
+Ride changes
 its trip record with a compare-and-set on the trip version. Fleet's explicit start
 command atomically verifies the same reservation and expected vehicle version, marks
 the vehicle on-trip, and stores a receipt with a SHA-256 fingerprint of the normalized
@@ -97,7 +102,8 @@ database tests.
 
 Stopping a run is idempotent. The first stop changes it to `stopping`, stamps
 `stop_requested_at`, sets `drain_deadline_at` to ten server-clock seconds later, and prevents new
-requests or events. Work already issued drains under its existing identities; all
+requests or unissued trip starts. Accepted trips may issue their pre-created
+completion events while draining. Work already issued drains under its existing identities; all
 owner receipts must be reconciled before closing. Once all events and trips are
 finished, a user-stopped run is `stopped`, a normally exhausted run is `completed`,
 and an execution failure is `failed`, each with a terminal reason. At the drain
