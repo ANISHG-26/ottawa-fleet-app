@@ -76,11 +76,32 @@ func TestApplyMigrationsConcurrentInitialization(t *testing.T) {
 		}
 	}
 
+	// Derive the expected ledger from the tracked migration files so adding an
+	// owner migration cannot silently leave this concurrency test stale.
+	var expected []string
+	for _, owner := range []string{"fleet", "ride", "simulation"} {
+		files, err := filepath.Glob(filepath.Join(root, owner, "*.sql"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, file := range files {
+			expected = append(expected, owner+"/"+filepath.Base(file))
+		}
+	}
 	var count int
 	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM app_schema_migrations`).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
-	if count != 3 {
-		t.Fatalf("expected all three migration files to be recorded, got %d", count)
+	if count != len(expected) {
+		t.Fatalf("expected all %d migration files to be recorded, got %d", len(expected), count)
+	}
+	for _, name := range expected {
+		var applied bool
+		if err := db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM app_schema_migrations WHERE name=$1)`, name).Scan(&applied); err != nil {
+			t.Fatal(err)
+		}
+		if !applied {
+			t.Errorf("migration %q was not recorded", name)
+		}
 	}
 }

@@ -165,6 +165,9 @@ func (w *statusWriter) WriteHeader(code int) {
 }
 
 func (h *Handler) route(w http.ResponseWriter, r *http.Request) {
+	if strings.HasPrefix(r.URL.Path, "/v2/fleet/") && h.routeSimulation(w, r) {
+		return
+	}
 	if r.URL.Path == "/healthz" {
 		httpapi.WriteJSON(w, 200, map[string]string{"status": "ok"})
 		return
@@ -184,6 +187,14 @@ func (h *Handler) route(w http.ResponseWriter, r *http.Request) {
 		}
 		if _, err := h.db.ExecContext(r.Context(), `SELECT ride_id,vehicle_id,state,reserved_at,updated_at,pickup_zone,passengers FROM fleet_reservations LIMIT 0`); err != nil {
 			httpapi.WriteError(w, r, 503, "temporarily_unavailable", "fleet schema is unavailable")
+			return
+		}
+		if _, err := h.db.ExecContext(r.Context(), `SELECT vehicle_version,operational_state,active_trip_id,position_latitude,position_longitude FROM fleet_vehicles LIMIT 0`); err != nil {
+			httpapi.WriteError(w, r, 503, "temporarily_unavailable", "Fleet simulation schema is unavailable")
+			return
+		}
+		if _, err := h.db.ExecContext(r.Context(), `SELECT event_id,effect,payload_fingerprint,receipt FROM fleet_simulation_effects LIMIT 0`); err != nil {
+			httpapi.WriteError(w, r, 503, "temporarily_unavailable", "Fleet simulation schema is unavailable")
 			return
 		}
 		if _, err := database.DatasetEpoch(r.Context(), h.db); err != nil {
@@ -444,6 +455,28 @@ func (h *Handler) release(w http.ResponseWriter, r *http.Request, id string) {
 		return
 	}
 	now := h.clock().UTC()
+	// Match trip start/completion lock order: vehicle first, reservation second.
+	var candidateVehicle sql.NullString
+	if err = tx.QueryRowContext(r.Context(), `SELECT vehicle_id FROM fleet_reservations WHERE ride_id=$1`, id).Scan(&candidateVehicle); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		dbUnavailable(w, r)
+		return
+	}
+	if candidateVehicle.Valid {
+		var activeTrip, activeRide sql.NullString
+		err = tx.QueryRowContext(r.Context(), `SELECT active_trip_id,active_ride_id FROM fleet_vehicles WHERE vehicle_id=$1 FOR UPDATE`, candidateVehicle.String).Scan(&activeTrip, &activeRide)
+		if errors.Is(err, sql.ErrNoRows) {
+			httpapi.WriteError(w, r, 409, "version_conflict", "reservation vehicle is missing")
+			return
+		}
+		if err != nil {
+			dbUnavailable(w, r)
+			return
+		}
+		if activeTrip.Valid && activeRide.Valid && activeRide.String == id {
+			httpapi.WriteError(w, r, 409, "trip_active", "reservation belongs to an active simulation trip")
+			return
+		}
+	}
 	var out Reservation
 	err = tx.QueryRowContext(r.Context(), `SELECT ride_id,vehicle_id,state,reserved_at,updated_at FROM fleet_reservations WHERE ride_id=$1 FOR UPDATE`, id).Scan(&out.RideID, &out.VehicleID, &out.State, &out.ReservedAt, &out.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {

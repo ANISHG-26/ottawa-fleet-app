@@ -1162,7 +1162,7 @@
           },
           "execution_event_count": {
             "type": "integer",
-            "minimum": 1,
+            "minimum": 2,
             "maximum": 60
           },
           "duration_seconds": {
@@ -1207,6 +1207,328 @@
           "start_zone",
           "end_zone",
           "seed"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 1
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 2
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 2
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 4
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 3
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 6
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 4
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 8
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 5
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 10
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 6
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 12
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 7
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 14
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 8
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 16
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 9
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 18
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 10
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 20
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 11
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 22
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 12
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 24
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 13
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 26
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 14
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 28
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 15
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 30
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 16
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 32
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 17
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 34
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 18
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 36
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 19
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 38
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "request_count": {
+                  "const": 20
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "execution_event_count": {
+                  "minimum": 40
+                }
+              }
+            }
+          }
         ]
       },
       "Run": {
@@ -1610,7 +1932,8 @@
             "type": "string",
             "enum": [
               "trip_start",
-              "trip_complete"
+              "trip_complete",
+              "position_observation"
             ]
           },
           "run_id": {

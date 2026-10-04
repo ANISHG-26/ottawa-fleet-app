@@ -39,7 +39,7 @@ MANIFEST = obj({"scenario_id": enum("route20synthetic"), "fleet_profile": enum("
                 "idempotency_key": {"type": "string", "pattern": "^[A-Za-z0-9_-]{8,128}$"},
                 "event_rate_per_second": {"type": "integer", "minimum": 1, "maximum": 4},
                 "request_count": {"type": "integer", "minimum": 1, "maximum": 20},
-                "execution_event_count": {"type": "integer", "minimum": 1, "maximum": 60},
+                "execution_event_count": {"type": "integer", "minimum": 2, "maximum": 60},
                 "duration_seconds": {"type": "integer", "minimum": 1, "maximum": 60},
                 "max_in_flight": {"type": "integer", "minimum": 1, "maximum": 4},
                 "route_duration_seconds": {"const": 8}, "route_id": {"const": "lansdowne-centretown-v1"},
@@ -47,7 +47,10 @@ MANIFEST = obj({"scenario_id": enum("route20synthetic"), "fleet_profile": enum("
                 "seed": {"type": "integer", "minimum": 0, "maximum": 2147483647}},
                required=["scenario_id", "fleet_profile", "idempotency_key", "event_rate_per_second",
                          "request_count", "execution_event_count", "duration_seconds", "max_in_flight", "route_duration_seconds", "route_id",
-                         "start_zone", "end_zone", "seed"])
+                         "start_zone", "end_zone", "seed"],
+               allOf=[{"if": {"properties": {"request_count": {"const": count}}},
+                       "then": {"properties": {"execution_event_count": {"minimum": count * 2}}}}
+                      for count in range(1, 21)])
 RUN = obj({"run_id": ID, "state": RUN_STATE, "manifest": {"$ref": "#/components/schemas/RunManifest"},
            "created_at": STAMP, "started_at": STAMP, "deadline_at": STAMP,
            "stop_requested_at": STAMP, "drain_deadline_at": STAMP, "completed_at": STAMP,
@@ -80,7 +83,7 @@ EVENT = obj({"event_id": ID, "run_id": ID, "sequence": {"type": "integer", "mini
             required=["event_id", "run_id", "sequence", "kind", "scheduled_at", "result"])
 REQUEST = obj({"manifest": {"$ref": "#/components/schemas/RunManifest"}})
 STOP = obj({"drain": {"const": True}})
-FLEET_RECEIPT = obj({"event_id": ID, "effect": enum("trip_start", "trip_complete"), "run_id": ID,
+FLEET_RECEIPT = obj({"event_id": ID, "effect": enum("trip_start", "trip_complete", "position_observation"), "run_id": ID,
                      "ride_id": ID, "trip_id": ID, "vehicle_id": ID, "reservation_id": ID,
                      "payload_fingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
                      "accepted_vehicle_version": {"type": "integer", "minimum": 1},

@@ -20,6 +20,7 @@ var idemPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{8,128}$`)
 type API struct {
 	Store Repository
 	DB    *sql.DB
+	Trips TripEffects
 }
 type Repository interface {
 	Submit(context.Context, string, string, Request) (Submission, Ride, error)
@@ -42,7 +43,9 @@ func (a *API) Handler() http.Handler {
 		}
 		var compatible bool
 		_, epochErr := database.DatasetEpoch(ctx, a.DB)
-		if a.DB.PingContext(ctx) != nil || a.DB.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM app_schema_migrations WHERE name='ride/001_ride_jobs.sql')`).Scan(&compatible) != nil || !compatible || epochErr != nil {
+		if a.DB.PingContext(ctx) != nil || a.DB.QueryRowContext(ctx, `SELECT
+			EXISTS(SELECT 1 FROM app_schema_migrations WHERE name='ride/001_ride_jobs.sql') AND
+			EXISTS(SELECT 1 FROM app_schema_migrations WHERE name='ride/002_trips.sql')`).Scan(&compatible) != nil || !compatible || epochErr != nil {
 			httpapi.WriteError(w, r, 503, "temporarily_unavailable", "database migrations are unavailable or incompatible")
 			return
 		}
@@ -86,6 +89,7 @@ func (a *API) Handler() http.Handler {
 		}
 		httpapi.WriteJSON(w, 200, ride)
 	})
+	mux.HandleFunc("/v2/rides/", a.trip)
 	return httpapi.RequestID(mux)
 }
 
