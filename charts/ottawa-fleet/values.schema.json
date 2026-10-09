@@ -36,7 +36,7 @@
     },
     "probe": {"type":"object","additionalProperties":false,"required":["periodSeconds","timeoutSeconds","failureThreshold"],"properties":{"periodSeconds":{"type":"integer","minimum":1,"maximum":60},"timeoutSeconds":{"type":"integer","minimum":1,"maximum":10},"failureThreshold":{"type":"integer","minimum":1,"maximum":10}}}
   },
-  "required": ["global", "serviceAccount", "ports", "probes", "images", "database", "migrations", "fleetApi", "rideApi", "worker", "web", "podAnnotations"],
+  "required": ["global", "serviceAccount", "ports", "probes", "images", "database", "migrations", "fleetApi", "rideApi", "worker", "web", "simulation", "podAnnotations"],
   "properties": {
     "global": {
       "type": "object",
@@ -59,19 +59,20 @@
       }
     },
     "serviceAccount": {"type": "object", "additionalProperties": false, "required": ["create"], "properties": {"create": {"const": true}}},
-    "ports": {"type":"object","additionalProperties":false,"required":["fleetApi","rideApi","worker","web"],"properties":{"fleetApi":{"const":8080},"rideApi":{"const":8081},"worker":{"const":8082},"web":{"const":8080}}},
+    "ports": {"type":"object","additionalProperties":false,"required":["fleetApi","rideApi","worker","web","simulationController"],"properties":{"fleetApi":{"const":8080},"rideApi":{"const":8081},"worker":{"const":8082},"web":{"const":8080},"simulationController":{"const":8083}}},
     "probes": {"type":"object","additionalProperties":false,"required":["readiness","liveness"],"properties":{"readiness":{"$ref":"#/definitions/probe"},"liveness":{"$ref":"#/definitions/probe"}}},
     "images": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["dbInit", "fleetApi", "rideApi", "worker", "scenarioRunner", "web"],
+      "required": ["dbInit", "fleetApi", "rideApi", "worker", "scenarioRunner", "web", "simulationController"],
       "properties": {
         "dbInit": {"$ref": "#/definitions/image"},
         "fleetApi": {"$ref": "#/definitions/image"},
         "rideApi": {"$ref": "#/definitions/image"},
         "worker": {"$ref": "#/definitions/image"},
         "scenarioRunner": {"$ref": "#/definitions/image"},
-        "web": {"$ref": "#/definitions/image"}
+        "web": {"$ref": "#/definitions/image"},
+        "simulationController": {"$ref": "#/definitions/image"}
       }
     },
     "database": {
@@ -121,11 +122,13 @@
         "pauseAfterReservation": {"type": "boolean"}, "resources": {"$ref": "#/definitions/resources"}
       }
     },
-    "web": {"type": "object", "additionalProperties": false, "required": ["replicas", "resources"], "properties": {"replicas": {"type": "integer", "minimum": 1, "maximum": 20}, "resources": {"$ref": "#/definitions/resources"}}},
+    "web": {"type": "object", "additionalProperties": false, "required": ["replicas", "backgroundColor", "resources"], "properties": {"replicas": {"type": "integer", "minimum": 1, "maximum": 20}, "backgroundColor": {"type": "string", "enum": ["green", "blue"]}, "resources": {"$ref": "#/definitions/resources"}}},
+    "simulation": {"type": "object", "additionalProperties": false, "required": ["enabled", "fleetProfile", "resources"], "properties": {"enabled": {"type": "boolean"}, "fleetProfile": {"type": "string", "enum": ["default-six", "route20synthetic"]}, "resources": {"$ref": "#/definitions/resources"}}},
     "podAnnotations": {"type": "object", "additionalProperties": {"type": "string"}}
   },
   "allOf": [
     {"if": {"properties": {"database": {"properties": {"disposable": {"properties": {"enabled": {"const": true}}}}}}}, "then": {"properties": {"database": {"properties": {"disposable": {"properties": {"imageDigest": {"$ref": "#/definitions/digest"}}}}}}}, "else": {"properties": {"database": {"properties": {"existingSecret": {"minLength": 1}}}}}},
-    {"if": {"properties": {"database": {"properties": {"disposable": {"properties": {"enabled": {"const": true}}}}}}}, "then": {"properties": {"database": {"properties": {"disposable": {"properties": {"credentialsSecret": {"minLength": 1}}}}}}}}
+    {"if": {"properties": {"database": {"properties": {"disposable": {"properties": {"enabled": {"const": true}}}}}}}, "then": {"properties": {"database": {"properties": {"disposable": {"properties": {"credentialsSecret": {"minLength": 1}}}}}}}},
+    {"if": {"properties": {"simulation": {"properties": {"enabled": {"const": true}}}}}, "then": {"properties": {"simulation": {"properties": {"fleetProfile": {"const": "route20synthetic"}}}}}}
   ]
 }

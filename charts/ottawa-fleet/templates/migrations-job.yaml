@@ -1,5 +1,5 @@
 {{- if .Values.migrations.enabled }}
-{{- $migrationKey := printf "%s|%s|%s|%s|%t|%s|%s" .Values.images.dbInit.sourceCommit .Values.images.dbInit.digest .Values.database.existingSecret .Values.database.secretKey .Values.database.disposable.enabled .Values.database.disposable.connectionSecret .Values.database.disposable.connectionSecretKey | sha256sum | trunc 12 }}
+{{- $migrationKey := printf "%s|%s|%s|%s|%t|%s|%s|%s|%t" .Values.images.dbInit.sourceCommit .Values.images.dbInit.digest .Values.database.existingSecret .Values.database.secretKey .Values.database.disposable.enabled .Values.database.disposable.connectionSecret .Values.database.disposable.connectionSecretKey .Values.simulation.fleetProfile .Values.simulation.enabled | sha256sum | trunc 12 }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -37,6 +37,8 @@ spec:
             {{- include "ottawa-fleet.databaseEnv" . | nindent 12 }}
             - name: BUILD_DIGEST
               value: {{ .Values.images.dbInit.digest | quote }}
+            - name: FLEET_PROFILE
+              value: {{ .Values.simulation.fleetProfile | quote }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

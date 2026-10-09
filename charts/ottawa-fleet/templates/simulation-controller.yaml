@@ -1,0 +1,81 @@
+{{- if .Values.simulation.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simulation-controller
+  labels:
+    {{- include "ottawa-fleet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: simulation-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "simulation-controller") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "simulation-controller") | nindent 8 }}
+      annotations:
+        {{- include "ottawa-fleet.podAnnotations" (dict "root" . "image" .Values.images.simulationController) | nindent 8 }}
+    spec:
+      serviceAccountName: ottawa-fleet-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 15
+      {{- include "ottawa-fleet.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- toYaml .Values.global.securityContext | nindent 8 }}
+      containers:
+        - name: simulation-controller
+          image: {{ include "ottawa-fleet.image" .Values.images.simulationController | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: {{ .Values.ports.simulationController }}
+              protocol: TCP
+          env:
+            {{- include "ottawa-fleet.databaseEnv" . | nindent 12 }}
+            - name: HTTP_ADDR
+              value: {{ printf ":%v" .Values.ports.simulationController | quote }}
+            - name: BUILD_DIGEST
+              value: {{ .Values.images.simulationController.digest | quote }}
+            - name: SIMULATION_ENABLED
+              value: "1"
+            - name: FLEET_API_URL
+              value: {{ printf "http://fleet-api:%v" .Values.ports.fleetApi | quote }}
+            - name: RIDE_API_URL
+              value: {{ printf "http://ride-api:%v" .Values.ports.rideApi | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.simulation.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: simulation-controller
+  labels:
+    {{- include "ottawa-fleet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: simulation-controller
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "ottawa-fleet.selectorLabels" (dict "root" . "component" "simulation-controller") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.ports.simulationController }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

@@ -17,6 +17,7 @@ ports:
   rideApi: 8081
   worker: 8082
   web: 8080
+  simulationController: 8083
 
 probes:
   readiness:
@@ -53,6 +54,11 @@ images:
     architecture: amd64
   scenarioRunner:
     repository: ghcr.io/anishg-26/ottawa-fleet-app/scenario-runner
+    digest: ""
+    sourceCommit: ""
+    architecture: amd64
+  simulationController:
+    repository: ghcr.io/anishg-26/ottawa-fleet-app/simulation-controller
     digest: ""
     sourceCommit: ""
     architecture: amd64
@@ -119,8 +125,16 @@ worker:
 
 web:
   replicas: 1
+  backgroundColor: green
   resources:
     requests: {cpu: 50m, memory: 64Mi}
     limits: {cpu: 250m, memory: 128Mi}
+
+simulation:
+  enabled: false
+  fleetProfile: default-six
+  resources:
+    requests: {cpu: 100m, memory: 96Mi}
+    limits: {cpu: 500m, memory: 256Mi}
 
 podAnnotations: {}

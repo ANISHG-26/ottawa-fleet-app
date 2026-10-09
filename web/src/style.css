@@ -4,3 +4,7 @@
 
 
 .ride-title strong{min-width:0;flex:1;overflow-wrap:anywhere}.sim-trip-card{min-width:0;overflow-wrap:anywhere}
+
+html[data-app-background="blue"] body{background:radial-gradient(ellipse at 78% -16%,rgba(51,112,157,.24),transparent 39%),#08131d}
+html[data-app-background="blue"] .panel,html[data-app-background="blue"] .metric-card{background-image:none;background-color:#142630;border-color:#2a4252}
+html[data-app-background="blue"] .simulation-events,html[data-app-background="blue"] .sim-trip-card{background-color:#10212c;border-color:#294452}

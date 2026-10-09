@@ -27,6 +27,9 @@ spec:
         - name: web
           image: {{ include "ottawa-fleet.image" .Values.images.web | quote }}
           imagePullPolicy: IfNotPresent
+          env:
+            - name: APP_BACKGROUND_COLOR
+              value: {{ .Values.web.backgroundColor | quote }}
           ports:
             - name: http
               containerPort: {{ .Values.ports.web }}

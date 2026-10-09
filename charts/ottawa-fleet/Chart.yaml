@@ -2,8 +2,8 @@ apiVersion: v2
 name: ottawa-fleet
 description: Namespace-portable Ottawa Fleet mock application workloads.
 type: application
-version: 0.1.1
-appVersion: "1.0.0"
+version: 0.2.0
+appVersion: "0.2.0"
 home: https://github.com/ANISHG-26/ottawa-fleet-app
 sources:
   - https://github.com/ANISHG-26/ottawa-fleet-app
