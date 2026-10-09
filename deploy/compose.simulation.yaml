@@ -1,0 +1,30 @@
+name: ${SIMULATION_PROJECT_NAME:-ottawa-fleet-simulation}
+
+services:
+  db-init:
+    environment:
+      FLEET_PROFILE: route20synthetic
+
+  fleet-api:
+    ports: !override
+      - "127.0.0.1:${SIMULATION_FLEET_API_PORT:-18080}:8080"
+
+  ride-api:
+    ports: !override
+      - "127.0.0.1:${SIMULATION_RIDE_API_PORT:-18081}:8081"
+
+  web:
+    ports: !override
+      - "127.0.0.1:${SIMULATION_WEB_PORT:-18088}:8080"
+
+  simulation-controller:
+    ports: !override
+      - "127.0.0.1:${SIMULATION_API_PORT:-18083}:8083"
+
+volumes:
+  fleet_data:
+    name: ${SIMULATION_PROJECT_NAME:-ottawa-fleet-simulation}_fleet_data
+
+networks:
+  app:
+    name: ${SIMULATION_PROJECT_NAME:-ottawa-fleet-simulation}

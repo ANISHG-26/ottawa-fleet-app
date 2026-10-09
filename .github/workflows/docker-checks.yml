@@ -7,6 +7,7 @@ on:
       - "deploy/**"
       - "services/**"
       - "db/**"
+      - "tests/**"
       - "web/**"
       - ".dockerignore"
       - ".github/workflows/docker-checks.yml"
@@ -15,6 +16,7 @@ on:
       - "deploy/**"
       - "services/**"
       - "db/**"
+      - "tests/**"
       - "web/**"
       - ".dockerignore"
       - ".github/workflows/docker-checks.yml"
@@ -30,7 +32,7 @@ concurrency:
 jobs:
   compose:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,6 +45,11 @@ jobs:
           password="$(openssl rand -hex 24)"
           printf '::add-mask::%s\n' "$password"
           printf 'COMPOSE_PROJECT=%s\n' "$project" >> "$GITHUB_ENV"
+          printf 'SIMULATION_PROJECT_NAME=%s-simulation\n' "$project" >> "$GITHUB_ENV"
+          printf 'SIMULATION_FLEET_API_PORT=18080\n' >> "$GITHUB_ENV"
+          printf 'SIMULATION_RIDE_API_PORT=18081\n' >> "$GITHUB_ENV"
+          printf 'SIMULATION_API_PORT=18083\n' >> "$GITHUB_ENV"
+          printf 'SIMULATION_WEB_PORT=18088\n' >> "$GITHUB_ENV"
           printf 'POSTGRES_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
           cat > "$RUNNER_TEMP/compose-ci.yaml" <<EOF
           volumes:
@@ -109,10 +116,26 @@ jobs:
               raise TimeoutError(f"ride {ride_id} did not complete within 90 seconds")
           PY
 
+      - name: Build and start isolated simulation Compose project
+        run: >-
+          COMPOSE_PROJECT_NAME="$SIMULATION_PROJECT_NAME" docker compose
+          -p "$SIMULATION_PROJECT_NAME" -f deploy/compose.yaml
+          -f deploy/compose.simulation.yaml --profile simulation
+          up --detach --build --wait --wait-timeout 240
+
+      - name: Verify route20synthetic simulation journey
+        run: python tests/simulation_journey.py
+
       - name: Show Compose state on failure
         if: failure()
-        run: docker compose -p "$COMPOSE_PROJECT" -f deploy/compose.yaml -f "$RUNNER_TEMP/compose-ci.yaml" ps --all
+        run: |
+          docker compose -p "$COMPOSE_PROJECT" -f deploy/compose.yaml -f "$RUNNER_TEMP/compose-ci.yaml" ps --all
+          COMPOSE_PROJECT_NAME="$SIMULATION_PROJECT_NAME" docker compose -p "$SIMULATION_PROJECT_NAME" -f deploy/compose.yaml -f deploy/compose.simulation.yaml --profile simulation ps --all
 
-      - name: Remove this run's Compose resources
+      - name: Remove this run's simulation Compose resources
+        if: always() && env.COMPOSE_PROJECT != ''
+        run: COMPOSE_PROJECT_NAME="$SIMULATION_PROJECT_NAME" docker compose -p "$SIMULATION_PROJECT_NAME" -f deploy/compose.yaml -f deploy/compose.simulation.yaml --profile simulation down --volumes --remove-orphans
+
+      - name: Remove this run's base Compose resources
         if: always() && env.COMPOSE_PROJECT != ''
         run: docker compose -p "$COMPOSE_PROJECT" -f deploy/compose.yaml -f "$RUNNER_TEMP/compose-ci.yaml" down --volumes --remove-orphans
