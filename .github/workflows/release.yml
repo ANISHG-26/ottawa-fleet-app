@@ -93,6 +93,8 @@ jobs:
             app_cmd: assignment-worker
           - service: scenario-runner
             app_cmd: scenario-runner
+          - service: simulation-controller
+            app_cmd: simulation-controller
     steps:
       - uses: actions/checkout@v4
         with:
@@ -231,3 +233,37 @@ jobs:
           path: release-metadata.json
           if-no-files-found: error
           retention-days: 90
+
+  verify-release-manifest:
+    needs: [publish-go-images, publish-web-image]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-metadata
+      - name: Assert complete immutable image set
+        env:
+          RELEASE: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import glob, json, os, re, sys
+          expected = {"db-init", "fleet-api", "ride-api", "assignment-worker", "scenario-runner", "simulation-controller", "web"}
+          files = glob.glob("release-metadata/**/release-metadata.json", recursive=True)
+          records = [json.load(open(path, encoding="utf-8")) for path in files]
+          found = {record.get("service") for record in records}
+          if len(records) != 7 or found != expected:
+              sys.exit(f"release artifact set mismatch: found {sorted(found)} from {len(records)} manifests")
+          for record in records:
+              if not re.fullmatch(r"sha256:[a-f0-9]{64}", record.get("digest", "")):
+                  sys.exit(f"invalid digest for {record['service']}")
+              if record.get("source_commit") != os.environ["COMMIT"] or record.get("architecture") != "linux/amd64" or record.get("release") != os.environ["RELEASE"]:
+                  sys.exit(f"source, architecture, or release mismatch for {record['service']}")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("Verified all seven immutable image manifests for this release.\n")
+          PY

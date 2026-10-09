@@ -1,5 +1,21 @@
 import { expect, test } from '@playwright/test';
 
+test('runtime blue background config changes the app panels', async ({ page }) => {
+  await page.route('**/runtime-config.json', route => route.fulfill({ json: { backgroundColor: 'blue' }, headers: { 'cache-control': 'no-store' } }));
+  await page.route('https://tile.openstreetmap.org/**', route => route.abort());
+  await page.goto('/?fixture=1');
+  await expect(page.locator('html')).toHaveAttribute('data-app-background', 'blue');
+  await expect.poll(() => page.locator('.panel').first().evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(20, 38, 48)');
+});
+
+test('runtime background config failure falls back to green', async ({ page }) => {
+  await page.route('**/runtime-config.json', route => route.abort());
+  await page.route('https://tile.openstreetmap.org/**', route => route.abort());
+  await page.goto('/?fixture=1');
+  await expect(page.locator('html')).toHaveAttribute('data-app-background', 'green');
+  await expect.poll(() => page.locator('.panel').first().evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+});
+
 test('fixture operator flow labels synthetic data and enforces idempotent ride submissions', async ({ page }) => {
   await page.route('https://tile.openstreetmap.org/**', route => route.abort());
   await page.goto('/?fixture=1');

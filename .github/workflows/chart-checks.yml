@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "charts/**"
+      - "tests/test_cluster_chart.py"
       - "deploy/Dockerfile*"
       - ".dockerignore"
       - ".github/workflows/release.yml"
@@ -12,6 +13,7 @@ on:
     branches: [main]
     paths:
       - "charts/**"
+      - "tests/test_cluster_chart.py"
       - "deploy/Dockerfile*"
       - ".dockerignore"
       - ".github/workflows/release.yml"
@@ -41,6 +43,9 @@ jobs:
 
       - name: Install pinned YAML parser
         run: python -m pip install --disable-pip-version-check PyYAML==6.0.2
+
+      - name: Check simulation chart behavior
+        run: python -m unittest tests.test_cluster_chart -v
 
       - name: Lint, render, package, and check rendered release contracts
         shell: bash
@@ -96,7 +101,7 @@ jobs:
           PY
 
           helm package "$chart" --destination "$RUNNER_TEMP"
-          helm show chart "$RUNNER_TEMP/ottawa-fleet-0.1.1.tgz" >/dev/null
+          helm show chart "$RUNNER_TEMP/ottawa-fleet-0.2.0.tgz" >/dev/null
 
           python - "$RUNNER_TEMP" <<'PY'
           import pathlib

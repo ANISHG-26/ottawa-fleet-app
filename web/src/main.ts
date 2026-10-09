@@ -5,6 +5,10 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './map.css';
 import './style.css';
+import { DEFAULT_APP_BACKGROUND_COLOR, loadAppBackgroundColor } from './release-config';
+
+document.documentElement.dataset.appBackground = DEFAULT_APP_BACKGROUND_COLOR;
+void loadAppBackgroundColor().then(color => { document.documentElement.dataset.appBackground = color; });
 
 const fixtureMode = new URLSearchParams(location.search).get('fixture') === '1';
 const app = document.querySelector<HTMLDivElement>('#app')!;

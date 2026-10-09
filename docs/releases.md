@@ -6,7 +6,7 @@ The application repository owns images, migrations, and the versioned Helm chart
 
 The `Trusted application release` workflow runs only for pushed `v*.*.*` tags. Create a release tag from a reviewed commit after the repository checks and local PostgreSQL behavior suite pass. The read-only `verify` job runs Go tests against an ephemeral PostgreSQL service, builds the UI, lints/renders/packages the chart, and does not receive package-write permission. Image publishing runs only after verification, from the tag event, with `packages: write` scoped to those jobs. Pull request events cannot run these publishing jobs.
 
-It builds one `linux/amd64` image for each Go command (`db-init`, `fleet-api`, `ride-api`, `assignment-worker`, `scenario-runner`) and one UI image. The workflow publishes version and source-SHA tags for discovery, OCI source/revision/service/version labels, and records the registry-returned immutable digest, full source commit, and architecture in one JSON artifact per image. Deployment values must use `repository@sha256:…`; tags are never deployment pins. Go API and worker binaries expose `/buildinfo` with service, source commit, architecture, and the configured image digest. The image digest is supplied at runtime because the registry assigns it after the image is built. OCI labels and release metadata identify the UI image.
+It builds one `linux/amd64` image for each Go command (`db-init`, `fleet-api`, `ride-api`, `assignment-worker`, `scenario-runner`, `simulation-controller`) and one UI image. The workflow publishes version and source-SHA tags for discovery, OCI source/revision/service/version labels, and records the registry-returned immutable digest, full source commit, and architecture in one JSON artifact per image. Deployment values must use `repository@sha256:…`; tags are never deployment pins. Go API and worker binaries expose `/buildinfo` with service, source commit, architecture, and the configured image digest. The image digest is supplied at runtime because the registry assigns it after the image is built. OCI labels and release metadata identify the UI image.
 
 The workflow also uploads the versioned `.tgz` chart as an artifact. It does not publish the chart to a registry, create a GitHub Release record or create a platform PR. The trusted tag/release administrator must ensure the tag points to an approved commit and cannot be moved under repository tag protections.
 
@@ -21,7 +21,7 @@ as the `ottawa-fleet-helm-chart` Actions artifact. Image identity artifacts are
 attached to that same run. There is no GitHub Release page for this tag; use
 the tag for reviewed source and the workflow for build results/artifacts.
 
-Current `main` has chart source `0.1.1`, including the disposable PostgreSQL
+The earlier chart source `0.1.1`, including the disposable PostgreSQL
 mount-directory fix from [PR #23](https://github.com/ANISHG-26/ottawa-fleet-app/pull/23),
 and the bounded Ride API handling from
 [PR #21](https://github.com/ANISHG-26/ottawa-fleet-app/pull/21). These later changes
@@ -30,6 +30,8 @@ build before promoting an artifact set that claims the newer source. Chart
 source version, image digests and source commits must stay aligned with the
 actual build metadata; merged source alone does not prove installed-chart,
 Compose or platform lifecycle acceptance.
+
+Chart source `0.2.0` adds the seventh simulation-controller image, explicit `route20synthetic` database initialization, and runtime green/blue web configuration. Publish the reviewed `v0.2.0` source before promoting it. The release workflow verifies all seven image metadata artifacts belong to that tag and source commit. Enable simulation before the first deployment to a fresh database; do not reset used fleet history to change profiles.
 
 ## Applying a release
 
