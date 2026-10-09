@@ -161,9 +161,9 @@ volume when you need a clean run. The script does not reset data. Inspect the
 run state and event history through the controller API before stopping the
 project.
 
-This API journey does not replace browser operator acceptance. The UI delivery
-in [issue #30](https://github.com/ANISHG-26/ottawa-fleet-app/issues/30) records
-refresh, stale-position, tile-failure and responsive browser checks.
+This API journey does not replace browser operator acceptance. Use the manual
+checks in [simulation acceptance](simulation-acceptance.md) for refresh,
+controller restart, stale positions, and unavailable map tiles.
 
 ## Validation and local data reset
 
