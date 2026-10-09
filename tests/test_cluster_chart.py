@@ -50,8 +50,8 @@ class ClusterChartTests(unittest.TestCase):
         self.assertFalse(any(doc.get("metadata", {}).get("name") == "simulation-controller" for doc in output))
         ci_values = yaml.safe_load((CHART / "ci-values.yaml").read_text())
         self.assertRegex(ci_values["images"]["simulationController"]["digest"], r"^sha256:[a-f0-9]{64}$")
-        self.assertIn("version: 0.2.0", (CHART / "Chart.yaml").read_text())
-        self.assertIn('appVersion: "0.2.0"', (CHART / "Chart.yaml").read_text())
+        self.assertIn("version: 0.2.1", (CHART / "Chart.yaml").read_text())
+        self.assertIn('appVersion: "0.2.1"', (CHART / "Chart.yaml").read_text())
 
     def test_enabled_route20_renders_bounded_controller_and_profile_migration_key(self) -> None:
         output = self.documents(render("--set", "simulation.enabled=true",
@@ -81,6 +81,12 @@ class ClusterChartTests(unittest.TestCase):
         default_job = next(doc for doc in self.documents(render().stdout) if doc.get("kind") == "Job")
         self.assertNotEqual(default_job["metadata"]["name"], migration["metadata"]["name"],
                             "fleet profile must participate in the migration Job key")
+
+    def test_ride_api_uses_the_fixed_fleet_api_url(self) -> None:
+        documents = self.documents(render().stdout)
+        ride = self.find(documents, "Deployment", "ride-api")
+        env = {item["name"]: item for item in ride["spec"]["template"]["spec"]["containers"][0]["env"]}
+        self.assertEqual(env["FLEET_API_URL"]["value"], "http://fleet-api:8080")
 
     def test_enabled_with_default_six_profile_is_rejected(self) -> None:
         result = render("--set", "simulation.enabled=true", check=False)

@@ -31,7 +31,7 @@ source version, image digests and source commits must stay aligned with the
 actual build metadata; merged source alone does not prove installed-chart,
 Compose or platform lifecycle acceptance.
 
-Chart source `0.2.0` adds the seventh simulation-controller image, explicit `route20synthetic` database initialization, and runtime green/blue web configuration. Publish the reviewed `v0.2.0` source before promoting it. The release workflow verifies all seven image metadata artifacts belong to that tag and source commit. Enable simulation before the first deployment to a fresh database; do not reset used fleet history to change profiles.
+Chart source `0.2.1` retains the seventh simulation-controller image, explicit `route20synthetic` database initialization, and runtime green/blue web configuration from `0.2.0`. It also configures Ride API's fixed `FLEET_API_URL=http://fleet-api:8080` dependency, which Ride API needs to submit trips. Publish the reviewed `v0.2.1` source before promoting it. The release workflow verifies all seven image metadata artifacts belong to that tag and source commit. Enable simulation before the first deployment to a fresh database; do not reset used fleet history to change profiles.
 
 ## Applying a release
 
