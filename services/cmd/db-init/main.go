@@ -38,5 +38,10 @@ func main() {
 	if err := fleet.EnsureSeed(ctx, db, seedClock); err != nil {
 		log.Fatalf("seed fleet: %v", err)
 	}
+	if profile := os.Getenv("FLEET_PROFILE"); profile != "" && profile != "default-six" {
+		if err := fleet.SeedSimulationProfile(ctx, db, seedClock, profile); err != nil {
+			log.Fatalf("initialize synthetic fleet profile: %v", err)
+		}
+	}
 	log.Printf("database initialized; fleet seed clock %s", seedClock.UTC().Format(time.RFC3339))
 }

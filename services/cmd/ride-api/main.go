@@ -46,6 +46,9 @@ func main() {
 	defer db.Close()
 	addr := env("HTTP_ADDR", ":8081")
 	api := &ride.API{Store: ride.NewStore(db), DB: db}
+	if fleetURL := os.Getenv("FLEET_API_URL"); fleetURL != "" {
+		api.Trips = ride.NewHTTPTripEffects(fleetURL)
+	}
 	server := newHTTPServer(addr, telemetry.HTTPMiddleware("ride-api")(api.Handler()), 10*time.Second, 10*time.Second)
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- server.ListenAndServe() }()
