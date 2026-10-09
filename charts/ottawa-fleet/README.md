@@ -1,6 +1,6 @@
 # Ottawa Fleet Helm chart
 
-Chart `ottawa-fleet` 0.2.0 owns the Fleet API, Ride API, assignment worker, operator UI, one migration Job, and an optional disposable PostgreSQL StatefulSet. It can also deploy the simulation controller when explicitly enabled. It creates no namespace, policy, ingress controller, autoscaler, CRD, or platform resource. Install one release per namespace because the in-cluster API names (`fleet-api`, `ride-api`, `simulation-controller`, and `postgres`) are stable for the UI proxy and worker.
+Chart `ottawa-fleet` 0.2.1 owns the Fleet API, Ride API, assignment worker, operator UI, one migration Job, and an optional disposable PostgreSQL StatefulSet. It can also deploy the simulation controller when explicitly enabled. It creates no namespace, policy, ingress controller, autoscaler, CRD, or platform resource. Install one release per namespace because the in-cluster API names (`fleet-api`, `ride-api`, `simulation-controller`, and `postgres`) are stable for the UI proxy and worker.
 
 ## Before installation
 
@@ -20,7 +20,7 @@ For an explicitly disposable lab database, set `database.disposable.enabled=true
 
 ## Install and upgrade
 
-Chart 0.2.0 initializes the disposable database in `/var/lib/postgresql/data/pgdata`, below the disk mount root, so a freshly formatted disk's `lost+found` directory does not prevent startup. Before upgrading a disposable database created with an older chart, check for `PG_VERSION` at the mount root. An existing root-layout database requires an explicit data migration or an authorized disposable reset; switching the path alone would create a separate empty database.
+Chart 0.2.1 initializes the disposable database in `/var/lib/postgresql/data/pgdata`, below the disk mount root, so a freshly formatted disk's `lost+found` directory does not prevent startup. Before upgrading a disposable database created with an older chart, check for `PG_VERSION` at the mount root. An existing root-layout database requires an explicit data migration or an authorized disposable reset; switching the path alone would create a separate empty database.
 
 After replacing the seven image digests and matching source metadata in a values file:
 
