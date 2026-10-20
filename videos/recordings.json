@@ -1,0 +1,35 @@
+{
+  "recordedAt": "2026-10-20T19:42:17.707Z",
+  "environment": "Live synthetic simulation stack over loopback",
+  "sourceCommit": "f91147ce8b7cc997e2bebe371fcdec8a6cc630d2",
+  "scenarios": [
+    {
+      "name": "01-fleet-and-freshness",
+      "title": "Read the fleet and spot stale data",
+      "staleVehicle": "vehicle-006",
+      "writes": 0,
+      "status": "passed"
+    },
+    {
+      "name": "02-trip-and-refresh",
+      "title": "Follow a trip and refresh safely",
+      "runId": "run-512a9d565f06bf51337d7f12",
+      "state": "completed",
+      "completedEvents": 2,
+      "incompleteWork": 0,
+      "vehicleId": "vehicle-010",
+      "refreshRestoredSameRun": true,
+      "status": "passed"
+    },
+    {
+      "name": "03-stop-and-drain",
+      "title": "Stop demand while finishing accepted work",
+      "runId": "run-eadd23171a8f12c76f632696",
+      "state": "stopped",
+      "completedEvents": 2,
+      "incompleteWork": 0,
+      "vehicleId": "vehicle-011",
+      "status": "passed"
+    }
+  ]
+}

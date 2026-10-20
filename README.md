@@ -5,21 +5,32 @@ fleet availability, durable ride requests, assignment work, and an operator UI.
 Use the Compose stack to observe demand, backlog, bounded API faults, and worker
 recovery without external accounts or infrastructure.
 
-**Phase 1 runtime implementation is merged:** Fleet and Ride APIs, PostgreSQL
-migrations, assignment worker, TypeScript operator UI, bounded scenario CLI,
-Dockerfiles, local Compose, and application CI. Follow
-[local development](docs/local-development.md) to start and validate the stack.
-Tagged build [v0.1.0](https://github.com/ANISHG-26/ottawa-fleet-app/tree/v0.1.0)
-was built from reviewed source commit `f485682`. Its [trusted workflow run](https://github.com/ANISHG-26/ottawa-fleet-app/actions/runs/37131621545)
-published six immutable GHCR images and packaged the Helm chart as an Actions
-artifact. The current chart source is `0.1.1`; see
-[published build versus current source](docs/releases.md#published-build-and-current-source)
-before selecting artifacts. Local Compose acceptance remains open under application issues [#4](https://github.com/ANISHG-26/ottawa-fleet-app/issues/4)
-and [#9](https://github.com/ANISHG-26/ottawa-fleet-app/issues/9); installed Helm
-acceptance remains open under [#11](https://github.com/ANISHG-26/ottawa-fleet-app/issues/11).
-Platform measurement and the GCP lab remain separate acceptance work tracked by
-[platform #12](https://github.com/ANISHG-26/ottawa-fleet-platform/issues/12) and
-[platform #15](https://github.com/ANISHG-26/ottawa-fleet-platform/issues/15).
+## Two-minute refresher
+
+**Back after a week or two? Start with the [quick guide](QUICK_GUIDE.md).**
+It explains the screens and the main ideas without requiring a code deep dive.
+
+| Watch a short captioned clip | What it teaches |
+|---|---|
+| [Fleet and freshness](videos/01-fleet-and-freshness.webm) | See 20 synthetic vehicles and recognize stale data. |
+| [Trip and refresh](videos/02-trip-and-refresh.webm) | Follow one trip and recover the same run after refresh. |
+| [Stop and drain](videos/03-stop-and-drain.webm) | Stop demand while accepted work finishes. |
+
+Open [WATCH.html](WATCH.html) from a local clone for inline video players.
+The [capture metadata](videos/recordings.json) identifies the release shown.
+
+**Current snapshot — October 20, 2026:** Fleet/Ride APIs, durable assignment,
+route simulation, operator UI, PostgreSQL migrations, Compose and CI are built.
+[v0.2.1](https://github.com/ANISHG-26/ottawa-fleet-app/tree/v0.2.1) has seven
+published images and a versioned Helm chart. Live trip, vehicle reuse,
+refresh recovery and Stop-and-drain journeys have passed; see
+[local simulation evidence](docs/simulation-acceptance.md) and
+[cloud acceptance](https://github.com/ANISHG-26/ottawa-fleet-platform/blob/main/docs/acceptance/first-application-deployment.md).
+Broader recovery measurements, GitOps drift correction and compatible rollback
+remain platform acceptance work. Older runbooks contain dated release history;
+use their dates when interpreting status.
+
+For startup, follow [local development](docs/local-development.md).
 
 Optional local LGTM telemetry is described in [telemetry setup](docs/telemetry.md).
 
@@ -36,7 +47,10 @@ payments, or safety decisions are in scope.
 ## Repository layout
 
 ```text
-services/   # One Go module: fleet-api, ride-api, assignment-worker, scenario-runner
+QUICK_GUIDE.md # Plain-language tour and links to recorded scenarios
+WATCH.html  # Local video gallery; open in a browser
+videos/     # Short synthetic Playwright recordings, posters and capture metadata
+services/   # One Go module: APIs, assignment worker, scenario runner, simulation controller
 web/        # TypeScript operator UI, fixture and browser checks
 contracts/  # Versioned OpenAPI/job schemas and fixtures
 db/         # Fleet and ride PostgreSQL migrations

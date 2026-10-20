@@ -6,6 +6,7 @@
   "scripts": {
     "test": "vitest run --pool=threads --maxWorkers=1",
     "test:browser": "playwright test",
+    "guide:record": "node guides/record.mjs",
     "build": "tsc --noEmit && vite build",
     "dev": "vite --host 0.0.0.0",
     "preview": "vite preview --host 0.0.0.0"
