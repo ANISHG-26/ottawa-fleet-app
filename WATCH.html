@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ottawa Fleet — short walkthroughs</title>
+<style>
+  :root { color-scheme: dark; font: 18px/1.6 system-ui,sans-serif; background:#0f1914; color:#e5ece7; }
+  body { max-width:960px; margin:auto; padding:32px 20px 64px; }
+  h1,h2 { line-height:1.2; } h2 { margin-top:40px; }
+  a { color:#b9ef72; } video { width:100%; border:1px solid #395141; border-radius:12px; background:#000; }
+  p { max-width:75ch; } .note { color:#b7c6bb; }
+</style>
+<h1>Ottawa Fleet in two minutes</h1>
+<p>A synthetic Ottawa fleet, durable ride assignment, and server-controlled trips.
+These short Playwright recordings have on-screen captions and no audio.</p>
+<p class="note">Recorded examples, not live status. <a href="QUICK_GUIDE.md">Read the quick guide</a>
+or <a href="videos/recordings.json">check the captured release and outcomes</a>.</p>
+<h2>1. Read the fleet</h2>
+<p>See the neighborhood counts and a deliberately stale vehicle. Unknown means
+the observation is too old to treat as current.</p>
+<video controls preload="none" poster="videos/01-fleet-and-freshness.png" aria-label="Fleet overview and stale observations">
+  <source src="videos/01-fleet-and-freshness.webm" type="video/webm">
+  <a href="videos/01-fleet-and-freshness.webm">Download the fleet walkthrough</a>.
+</video>
+<h2>2. Follow a trip, then refresh</h2>
+<p>One bounded trip continues on the server. Refresh restores its run identity.
+A vehicle assignment and a completed passenger trip are different milestones.</p>
+<video controls preload="none" poster="videos/02-trip-and-refresh.png" aria-label="Trip completion and refresh recovery">
+  <source src="videos/02-trip-and-refresh.webm" type="video/webm">
+  <a href="videos/02-trip-and-refresh.webm">Download the trip walkthrough</a>.
+</video>
+<h2>3. Stop and drain</h2>
+<p>Stop new work while the already accepted trip finishes. Look for zero
+incomplete trips, requests and events at the end.</p>
+<video controls preload="none" poster="videos/03-stop-and-drain.png" aria-label="Stop and drain an accepted trip">
+  <source src="videos/03-stop-and-drain.webm" type="video/webm">
+  <a href="videos/03-stop-and-drain.webm">Download the stop and drain walkthrough</a>.
+</video>
+</html>
