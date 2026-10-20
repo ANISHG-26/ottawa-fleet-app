@@ -14,14 +14,18 @@ It explains the screens and the main ideas without requiring a code deep dive.
 
 **Trip and refresh · 18 seconds:** start one trip and recover the same run after refreshing.
 
-[![Watch the trip and refresh scenario](videos/02-trip-and-refresh.png)](videos/02-trip-and-refresh.webm)
+https://github.com/user-attachments/assets/45fc662f-9674-4abf-aa98-9c91253d8ea9
+
+[Download this recording](videos/02-trip-and-refresh.webm)
 
 <details>
 <summary>Fleet and freshness · 11 seconds</summary>
 
 See 20 synthetic vehicles and recognize stale observations.
 
-[![Watch fleet freshness](videos/01-fleet-and-freshness.png)](videos/01-fleet-and-freshness.webm)
+https://github.com/user-attachments/assets/0d460a4b-80e1-4e68-a0cc-28cc74036281
+
+[Download this recording](videos/01-fleet-and-freshness.webm)
 
 </details>
 
@@ -30,7 +34,9 @@ See 20 synthetic vehicles and recognize stale observations.
 
 Stop demand while the already accepted trip finishes with zero incomplete work.
 
-[![Watch Stop and drain](videos/03-stop-and-drain.png)](videos/03-stop-and-drain.webm)
+https://github.com/user-attachments/assets/936768fa-81af-4d58-a8d3-67088318b6a3
+
+[Download this recording](videos/03-stop-and-drain.webm)
 
 </details>
 

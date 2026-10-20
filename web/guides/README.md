@@ -46,3 +46,23 @@ python ../scripts/check_repository.py
 
 Open root `WATCH.html` to play the three clips locally. The captions are added by
 the recorder for the video; they are not changes to the shipped console.
+
+## Refresh the GitHub README players
+
+GitHub renders uploaded media attachment URLs as players. A relative repository
+WebM link opens a file/download view instead. After recording changed behavior,
+upload the reviewed clips using the Markdown editor or a GitHub CLI version
+with `--attach`, then replace the standalone attachment URLs in root README.
+Keep the repository download links and `WATCH.html` for local/offline use.
+
+For example, when preparing an authorized documentation PR with a current CLI:
+
+```sh
+gh pr edit <PR-number> --attach ./videos/02-trip-and-refresh.webm
+```
+
+Run that from the repository root, copy the generated attachment URL from the
+PR body into the corresponding README paragraph, and check the rendered
+README's actual player before committing the final update. Older CLI versions
+without `--attach` need the web editor's upload control instead.
+See [GitHub's attachment documentation](https://docs.github.com/en/github-cli/github-cli/attaching-files-with-github-cli).
