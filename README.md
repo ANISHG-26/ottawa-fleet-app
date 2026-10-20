@@ -10,11 +10,35 @@ recovery without external accounts or infrastructure.
 **Back after a week or two? Start with the [quick guide](QUICK_GUIDE.md).**
 It explains the screens and the main ideas without requiring a code deep dive.
 
-| Watch a short captioned clip | What it teaches |
-|---|---|
-| [Fleet and freshness](videos/01-fleet-and-freshness.webm) | See 20 synthetic vehicles and recognize stale data. |
-| [Trip and refresh](videos/02-trip-and-refresh.webm) | Follow one trip and recover the same run after refresh. |
-| [Stop and drain](videos/03-stop-and-drain.webm) | Stop demand while accepted work finishes. |
+**Watch the app in 47 seconds.** The three clips have on-screen captions and no audio.
+
+**Trip and refresh · 18 seconds:** start one trip and recover the same run after refreshing.
+
+https://github.com/user-attachments/assets/45fc662f-9674-4abf-aa98-9c91253d8ea9
+
+[Download this recording](videos/02-trip-and-refresh.webm)
+
+<details>
+<summary>Fleet and freshness · 11 seconds</summary>
+
+See 20 synthetic vehicles and recognize stale observations.
+
+https://github.com/user-attachments/assets/0d460a4b-80e1-4e68-a0cc-28cc74036281
+
+[Download this recording](videos/01-fleet-and-freshness.webm)
+
+</details>
+
+<details>
+<summary>Stop and drain · 18 seconds</summary>
+
+Stop demand while the already accepted trip finishes with zero incomplete work.
+
+https://github.com/user-attachments/assets/936768fa-81af-4d58-a8d3-67088318b6a3
+
+[Download this recording](videos/03-stop-and-drain.webm)
+
+</details>
 
 Open [WATCH.html](WATCH.html) from a local clone for inline video players.
 The [capture metadata](videos/recordings.json) identifies the release shown.
