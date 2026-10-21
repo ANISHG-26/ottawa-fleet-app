@@ -46,7 +46,7 @@ The unit tests cover freshness derivation, loading/empty/unavailable/stale snaps
 
 Dependencies are pinned exactly in `package.json` and `package-lock.json`.
 Leaflet 1.9.4 (BSD-2-Clause) provides the map and `@types/leaflet` 1.9.22
-(MIT) supplies TypeScript definitions. Vite 7.3.6 (MIT) serves/builds assets,
+(MIT) supplies TypeScript definitions. Vite 7.3.7 (MIT) serves/builds assets,
 TypeScript 5.9.2 (Apache-2.0) checks and transpiles source, Vitest 3.2.7 (MIT)
 runs behavior tests, and Playwright 1.63.0 (Apache-2.0) drives the browser
 smoke tests. Packages are installed from npm; no third-party application code
