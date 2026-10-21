@@ -50,8 +50,44 @@ class ClusterChartTests(unittest.TestCase):
         self.assertFalse(any(doc.get("metadata", {}).get("name") == "simulation-controller" for doc in output))
         ci_values = yaml.safe_load((CHART / "ci-values.yaml").read_text())
         self.assertRegex(ci_values["images"]["simulationController"]["digest"], r"^sha256:[a-f0-9]{64}$")
-        self.assertIn("version: 0.2.1", (CHART / "Chart.yaml").read_text())
-        self.assertIn('appVersion: "0.2.1"', (CHART / "Chart.yaml").read_text())
+        self.assertIn("version: 0.2.2", (CHART / "Chart.yaml").read_text())
+        self.assertIn('appVersion: "0.2.2"', (CHART / "Chart.yaml").read_text())
+
+    def test_telemetry_is_off_by_default_and_only_configures_application_processes(self) -> None:
+        output = self.documents(render().stdout)
+        for name in ("fleet-api", "ride-api", "assignment-worker"):
+            deployment = self.find(output, "Deployment", name)
+            env = {item["name"]: item for item in deployment["spec"]["template"]["spec"]["containers"][0]["env"]}
+            self.assertNotIn("OTEL_EXPORTER_OTLP_ENDPOINT", env)
+
+    def test_enabled_telemetry_sets_endpoint_only_for_api_and_worker(self) -> None:
+        endpoint = "http://alloy.observability.svc.cluster.local:4318"
+        output = self.documents(render("--set", "telemetry.enabled=true",
+                                       "--set-string", f"telemetry.otlpEndpoint={endpoint}").stdout)
+        expected = {"fleet-api", "ride-api", "assignment-worker"}
+        for name in expected:
+            deployment = self.find(output, "Deployment", name)
+            env = {item["name"]: item for item in deployment["spec"]["template"]["spec"]["containers"][0]["env"]}
+            self.assertEqual(env["OTEL_EXPORTER_OTLP_ENDPOINT"]["value"], endpoint)
+        for doc in output:
+            if doc.get("kind") == "Deployment" and doc.get("metadata", {}).get("name") not in expected:
+                env = {item["name"]: item for item in doc["spec"]["template"]["spec"]["containers"][0].get("env", [])}
+                self.assertNotIn("OTEL_EXPORTER_OTLP_ENDPOINT", env)
+
+    def test_enabled_telemetry_requires_safe_http_origin(self) -> None:
+        for endpoint in ("", "//alloy:4318", "ftp://alloy:4318", "http://:4318", "http://-alloy:4318",
+                         "http://alloy:65536", "http://user:pass@alloy:4318",
+                         "http://alloy:4318/path", "http://alloy:4318?query=x", "http://alloy:4318#fragment",
+                         "http://alloy:4318\n- name: INJECTED"):
+            with self.subTest(endpoint=endpoint):
+                result = render("--set", "telemetry.enabled=true", "--set-string",
+                                "telemetry.otlpEndpoint=" + endpoint, check=False)
+                self.assertNotEqual(result.returncode, 0, f"accepted unsafe endpoint {endpoint!r}")
+                self.assertIn("telemetry/otlpEndpoint", result.stderr)
+                render_guard = render("--skip-schema-validation", "--set", "telemetry.enabled=true",
+                                      "--set-string", "telemetry.otlpEndpoint=" + endpoint, check=False)
+                self.assertNotEqual(render_guard.returncode, 0, f"template accepted unsafe endpoint {endpoint!r}")
+                self.assertIn("telemetry.enabled requires telemetry.otlpEndpoint", render_guard.stderr)
 
     def test_enabled_route20_renders_bounded_controller_and_profile_migration_key(self) -> None:
         output = self.documents(render("--set", "simulation.enabled=true",

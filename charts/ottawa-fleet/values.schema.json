@@ -36,7 +36,7 @@
     },
     "probe": {"type":"object","additionalProperties":false,"required":["periodSeconds","timeoutSeconds","failureThreshold"],"properties":{"periodSeconds":{"type":"integer","minimum":1,"maximum":60},"timeoutSeconds":{"type":"integer","minimum":1,"maximum":10},"failureThreshold":{"type":"integer","minimum":1,"maximum":10}}}
   },
-  "required": ["global", "serviceAccount", "ports", "probes", "images", "database", "migrations", "fleetApi", "rideApi", "worker", "web", "simulation", "podAnnotations"],
+  "required": ["global", "serviceAccount", "ports", "probes", "images", "database", "migrations", "fleetApi", "rideApi", "worker", "web", "simulation", "telemetry", "podAnnotations"],
   "properties": {
     "global": {
       "type": "object",
@@ -124,11 +124,25 @@
     },
     "web": {"type": "object", "additionalProperties": false, "required": ["replicas", "backgroundColor", "resources"], "properties": {"replicas": {"type": "integer", "minimum": 1, "maximum": 20}, "backgroundColor": {"type": "string", "enum": ["green", "blue"]}, "resources": {"$ref": "#/definitions/resources"}}},
     "simulation": {"type": "object", "additionalProperties": false, "required": ["enabled", "fleetProfile", "resources"], "properties": {"enabled": {"type": "boolean"}, "fleetProfile": {"type": "string", "enum": ["default-six", "route20synthetic"]}, "resources": {"$ref": "#/definitions/resources"}}},
+    "telemetry": {"type": "object", "additionalProperties": false, "required": ["enabled", "otlpEndpoint"], "properties": {"enabled": {"type": "boolean"}, "otlpEndpoint": {"anyOf": [{"const": ""}, {"type": "string", "pattern": "^https?://([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(\\.([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*(:(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3}))?$"}]}}},
     "podAnnotations": {"type": "object", "additionalProperties": {"type": "string"}}
   },
   "allOf": [
-    {"if": {"properties": {"database": {"properties": {"disposable": {"properties": {"enabled": {"const": true}}}}}}}, "then": {"properties": {"database": {"properties": {"disposable": {"properties": {"imageDigest": {"$ref": "#/definitions/digest"}}}}}}}, "else": {"properties": {"database": {"properties": {"existingSecret": {"minLength": 1}}}}}},
-    {"if": {"properties": {"database": {"properties": {"disposable": {"properties": {"enabled": {"const": true}}}}}}}, "then": {"properties": {"database": {"properties": {"disposable": {"properties": {"credentialsSecret": {"minLength": 1}}}}}}}},
-    {"if": {"properties": {"simulation": {"properties": {"enabled": {"const": true}}}}}, "then": {"properties": {"simulation": {"properties": {"fleetProfile": {"const": "route20synthetic"}}}}}}
+    {
+      "if": {"properties": {"database": {"properties": {"disposable": {"properties": {"enabled": {"const": true}}}}}}},
+      "then": {"properties": {"database": {"properties": {"disposable": {"properties": {"imageDigest": {"$ref": "#/definitions/digest"}}}}}}},
+      "else": {"properties": {"database": {"properties": {"existingSecret": {"minLength": 1}}}}}
+    },
+    {
+      "if": {"properties": {"database": {"properties": {"disposable": {"properties": {"enabled": {"const": true}}}}}}},
+      "then": {"properties": {"database": {"properties": {"disposable": {"properties": {"credentialsSecret": {"minLength": 1}}}}}}}
+    },
+    {
+      "if": {"properties": {"simulation": {"properties": {"enabled": {"const": true}}}}},
+      "then": {"properties": {"simulation": {"properties": {"fleetProfile": {"const": "route20synthetic"}}}}}
+    },
+    {
+      "if": {"properties": {"telemetry": {"properties": {"enabled": {"const": true}}}}},
+      "then": {"properties": {"telemetry": {"properties": {"otlpEndpoint": {"minLength": 1}}}}}}
   ]
 }
