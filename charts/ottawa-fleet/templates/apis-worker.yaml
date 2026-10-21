@@ -47,6 +47,7 @@ spec:
               value: {{ .Values.fleetApi.faultLatencyMS | quote }}
             - name: FLEET_FAULT_ERROR_PERCENT
               value: {{ .Values.fleetApi.faultErrorPercent | quote }}
+            {{- include "ottawa-fleet.telemetryEnv" . | nindent 12 }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -106,6 +107,7 @@ spec:
               value: {{ printf ":%v" .Values.ports.rideApi | quote }}
             - name: BUILD_DIGEST
               value: {{ .Values.images.rideApi.digest | quote }}
+            {{- include "ottawa-fleet.telemetryEnv" . | nindent 12 }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -169,6 +171,7 @@ spec:
               value: {{ .Values.images.worker.digest | quote }}
             - name: PAUSE_AFTER_RESERVATION
               value: {{ ternary "1" "0" .Values.worker.pauseAfterReservation | quote }}
+            {{- include "ottawa-fleet.telemetryEnv" . | nindent 12 }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
